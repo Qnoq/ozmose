@@ -34,7 +34,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Challenges
     Route::apiResource('challenges', ChallengeController::class);
     Route::get('/challenges/{challenge}/participants', [ChallengeController::class, 'participants']);
-    Route::post('/challenges/{challenge}/media', [ChallengeMediaController::class, 'store']);
     
     // Participations
     Route::post('/challenges/{challenge}/participate', [ChallengeParticipationController::class, 'store']);
