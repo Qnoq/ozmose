@@ -18,6 +18,15 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Routes protégées par Sanctum
 Route::middleware('auth:sanctum')->group(function () {
+
+    // Routes pour la gestion du cache
+    Route::prefix('cache')->group(function () {
+        Route::get('/status', [App\Http\Controllers\Api\AdminCacheController::class, 'status']);
+        Route::get('/test', [App\Http\Controllers\Api\AdminCacheController::class, 'test']);
+        Route::get('/keys', [App\Http\Controllers\Api\AdminCacheController::class, 'keys']);
+        Route::post('/clear', [App\Http\Controllers\Api\AdminCacheController::class, 'clear']);
+    });
+
     // Profil utilisateur
     Route::get('/user', [UserController::class, 'show']);
     Route::put('/user', [UserController::class, 'update']);

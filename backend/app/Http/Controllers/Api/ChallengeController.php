@@ -9,9 +9,17 @@ use App\Http\Resources\UserResource;
 use App\Http\Requests\StoreChallenge;
 use App\Http\Requests\UpdateChallenge;
 use App\Http\Resources\ChallengeResource;
+use App\Services\CacheService;
 
 class ChallengeController extends Controller
 {
+    protected $cacheService;
+    
+    public function __construct(CacheService $cacheService)
+    {
+        $this->cacheService = $cacheService;
+    }
+
     /**
      * Liste des défis de l'utilisateur connecté
      */
@@ -47,6 +55,10 @@ class ChallengeController extends Controller
                 'duration' => $request->duration,
                 'creator_id' => auth()->id(), // L'ID de l'utilisateur connecté
             ]);
+            
+            // Invalider les caches concernés
+            $this->cacheService->clearCategoriesCache();
+            $this->cacheService->clearUserCache(auth()->id());
             
             return new ChallengeResource($challenge);
         } catch (\Exception $e) {
@@ -93,8 +105,17 @@ class ChallengeController extends Controller
     public function update(UpdateChallenge $request, Challenge $challenge)
     {
         try {
+            $oldCategoryId = $challenge->category_id;
+            
             $challenge->update($request->validated());
-            info('Défi mis à jour avec succès', ['id' => $challenge->id]);
+            
+            // Invalider les caches concernés
+            $this->cacheService->clearChallengeCache($challenge->id);
+            
+            // Si la catégorie a changé, invalider aussi le cache des catégories
+            if ($oldCategoryId != $challenge->category_id) {
+                $this->cacheService->clearCategoriesCache();
+            }
             
             return new ChallengeResource($challenge->fresh(['creator', 'category']));
         } catch (\Exception $e) {
@@ -120,7 +141,15 @@ class ChallengeController extends Controller
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
+        // Garder une référence à la catégorie avant suppression
+        $categoryId = $challenge->category_id;
+        
         $challenge->delete();
+        
+        // Invalider les caches concernés
+        $this->cacheService->clearChallengeCache($challenge->id);
+        $this->cacheService->clearCategoriesCache();
+        $this->cacheService->clearUserCache($request->user()->id);
 
         return response()->json(['message' => 'Défi supprimé avec succès']);
     }
@@ -150,18 +179,30 @@ class ChallengeController extends Controller
      */
     public function publicChallenges(Request $request)
     {
-        $query = Challenge::where('is_public', true)
-            ->with(['creator', 'category'])
-            ->withCount('participations');
-            
-        // Filtrer par catégorie si spécifié
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
+        $sort = $request->get('sort', 'newest');
+        $page = $request->get('page', 1);
+        $categoryId = $request->get('category_id');
         
-        // Trier selon différents critères
-        if ($request->has('sort')) {
-            switch ($request->sort) {
+        // Construire une clé de cache unique
+        $cacheKey = "ozmose:challenges:public:{$sort}";
+        if ($categoryId) {
+            $cacheKey .= ":category_{$categoryId}";
+        }
+        $cacheKey .= ":page_{$page}";
+        
+        // Utiliser directement le Cache facade pour ce cas spécifique
+        $challenges = \Illuminate\Support\Facades\Cache::remember($cacheKey, 30, function () use ($request, $sort, $categoryId) {
+            $query = Challenge::where('is_public', true)
+                ->with(['creator', 'category'])
+                ->withCount('participations');
+                
+            // Filtrer par catégorie si spécifié
+            if ($categoryId) {
+                $query->where('category_id', $categoryId);
+            }
+            
+            // Trier selon différents critères
+            switch ($sort) {
                 case 'popular':
                     $query->orderByDesc('participations_count');
                     break;
@@ -174,11 +215,9 @@ class ChallengeController extends Controller
                 default:
                     $query->orderByDesc('created_at');
             }
-        } else {
-            $query->orderByDesc('created_at');
-        }
-        
-        $challenges = $query->paginate(15);
+            
+            return $query->paginate(15);
+        });
         
         return ChallengeResource::collection($challenges);
     }

@@ -12,14 +12,17 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreChallengeParticipation;
 use App\Http\Requests\UpdateChallengeParticipation;
 use App\Http\Resources\ChallengeParticipationResource;
+use App\Services\CacheService;
 
 class ChallengeParticipationController extends Controller
 {
     protected $mediaService;
+    protected $cacheService;
     
-    public function __construct(MediaService $mediaService)
+    public function __construct(MediaService $mediaService, CacheService $cacheService)
     {
         $this->mediaService = $mediaService;
+        $this->cacheService = $cacheService;
     }
     
     /**
@@ -197,52 +200,15 @@ class ChallengeParticipationController extends Controller
         try {
             $userId = $request->user()->id;
             
-            // Nombre total de défis
-            $totalCount = ChallengeParticipation::where('user_id', $userId)->count();
+            // Utiliser directement les méthodes du service de cache
+            $stats = $this->cacheService->getUserStats($userId);
+            $categoriesStats = $this->cacheService->getUserCategoryStats($userId);
             
-            // Défis complétés
-            $completedCount = ChallengeParticipation::where('user_id', $userId)
-                ->where('status', 'completed')
-                ->count();
-            
-            // Défis actifs
-            $activeCount = ChallengeParticipation::where('user_id', $userId)
-                ->where('status', 'accepted')
-                ->whereNull('completed_at')
-                ->whereNull('abandoned_at')
-                ->count();
-            
-            // Défis abandonnés
-            $abandonedCount = ChallengeParticipation::where('user_id', $userId)
-                ->where('status', 'abandoned')
-                ->count();
-            
-            // Invitations en attente
-            $pendingCount = ChallengeParticipation::where('user_id', $userId)
-                ->where('status', 'invited')
-                ->count();
-            
-            // Taux de complétion
-            $completionRate = $totalCount > 0 ? round(($completedCount / ($completedCount + $abandonedCount)) * 100, 1) : 0;
-            
-            // Statistiques par catégorie
-            $categoriesStats = ChallengeParticipation::where('user_id', $userId)
-                ->where('status', 'completed')
-                ->join('challenges', 'challenge_participations.challenge_id', '=', 'challenges.id')
-                ->join('categories', 'challenges.category_id', '=', 'categories.id')
-                ->select('categories.name', \DB::raw('count(*) as count'))
-                ->groupBy('categories.name')
-                ->get();
-            
-            return response()->json([
-                'total_challenges' => $totalCount,
-                'completed_challenges' => $completedCount,
-                'active_challenges' => $activeCount,
-                'abandoned_challenges' => $abandonedCount,
-                'pending_invitations' => $pendingCount,
-                'completion_rate' => $completionRate,
-                'categories_stats' => $categoriesStats
-            ]);
+            // Combiner les résultats
+            return response()->json(array_merge(
+                $stats,
+                ['categories_stats' => $categoriesStats]
+            ));
         } catch (\Exception $e) {
             info('Erreur lors de la récupération des statistiques', [
                 'message' => $e->getMessage()
@@ -405,12 +371,16 @@ class ChallengeParticipationController extends Controller
             // Mettre à jour la participation avec les données validées
             $participation->update($data);
 
-            info('Participation mise à jour', [
-                'participation_id' => $participation->id,
-                'user_id' => $request->user()->id,
-                'challenge_id' => $participation->challenge_id,
-                'new_status' => $data['status'] ?? $participation->status
-            ]);
+            // Une fois la mise à jour effectuée, invalider les caches concernés
+            // Utiliser les méthodes du service de cache
+            $this->cacheService->clearUserCache($participation->user_id);
+            $this->cacheService->clearChallengeCache($participation->challenge_id);
+            
+            // Si la participation concerne un défi public, invalider les caches publics aussi
+            if ($participation->challenge->is_public) {
+                // Vider le cache des "challenges populaires" car les stats peuvent changer
+                \Illuminate\Support\Facades\Cache::forget('ozmose:challenges:popular:5');
+            }
 
             // Charger les relations utiles pour la réponse
             $participation->load(['user', 'challenge', 'challenge.category']);
