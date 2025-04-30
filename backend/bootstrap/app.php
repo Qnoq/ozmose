@@ -12,7 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->alias([
+            'premium' => \App\Http\Middleware\CheckPremiumAccess::class,
+            'cache.active.user' => \App\Http\Middleware\CacheActiveUser::class,
+        ]);
+        $middleware->appendToGroup('api', \App\Http\Middleware\CacheActiveUser::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

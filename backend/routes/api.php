@@ -118,6 +118,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/monthly', [LeaderboardController::class, 'monthly']);
         Route::get('/category/{category}', [LeaderboardController::class, 'category']);
     });
+
+    Route::get('/features/drafts-info', [ChallengeController::class, 'getDraftsFeatureInfo']);
     
     // Routes exclusivement premium (protégées par le middleware premium)
     Route::middleware('premium')->group(function () {
@@ -138,6 +140,13 @@ Route::middleware('auth:sanctum')->group(function () {
         // Routes pour les leaderboards premium
         Route::prefix('leaderboards')->group(function () {
             Route::get('/premium', [LeaderboardController::class, 'premium']);
+        });
+
+        Route::prefix('drafts/challenges')->group(function () {
+            Route::post('/', [ChallengeController::class, 'saveDraft']);
+            Route::get('/', [ChallengeController::class, 'getDraft']);
+            Route::delete('/', [ChallengeController::class, 'deleteDraft']);
+            Route::post('/create', [ChallengeController::class, 'createFromDraft']);
         });
         
         // Statistiques avancées
