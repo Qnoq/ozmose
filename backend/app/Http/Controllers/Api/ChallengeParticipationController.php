@@ -13,16 +13,19 @@ use App\Http\Requests\StoreChallengeParticipation;
 use App\Http\Requests\UpdateChallengeParticipation;
 use App\Http\Resources\ChallengeParticipationResource;
 use App\Services\CacheService;
+use App\Services\LeaderboardService;
 
 class ChallengeParticipationController extends Controller
 {
     protected $mediaService;
     protected $cacheService;
+    protected $leaderboardService;
     
-    public function __construct(MediaService $mediaService, CacheService $cacheService)
+    public function __construct(MediaService $mediaService, CacheService $cacheService, LeaderboardService $leaderboardService)
     {
         $this->mediaService = $mediaService;
         $this->cacheService = $cacheService;
+        $this->leaderboardService = $leaderboardService;
     }
     
     /**
@@ -361,6 +364,15 @@ class ChallengeParticipationController extends Controller
                 
                 // Attribuer des badges ou points si nécessaire
                 $this->awardCompletionAchievements($participation);
+
+                // Ajouter les points au leaderboard
+                $pointsAwarded = $this->leaderboardService->addPointsForChallenge($participation);
+                
+                // Ajouter l'information dans la réponse
+                $pointsInfo = [
+                    'points_awarded' => $pointsAwarded,
+                    'message' => "Bravo ! Vous avez gagné {$pointsAwarded} points !"
+                ];
             }
             
             // Si le statut passe à "abandoned", enregistrer la date d'abandon
@@ -390,7 +402,14 @@ class ChallengeParticipationController extends Controller
                 $this->checkGroupCompletion($participation->challenge_id);
             }
 
-            return new ChallengeParticipationResource($participation);
+            // Si des points ont été attribués, inclure l'info dans la réponse
+            $response = new ChallengeParticipationResource($participation);
+            
+            if (isset($pointsInfo)) {
+                return $response->additional(['points_info' => $pointsInfo]);
+            }
+            
+            return $response;
         } catch (\Exception $e) {
             info('Erreur lors de la mise à jour de la participation', [
                 'message' => $e->getMessage(),

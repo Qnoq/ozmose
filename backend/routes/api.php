@@ -1,15 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\MediaController;
+use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ChallengeController;
 use App\Http\Controllers\Api\FriendshipController;
+use App\Http\Controllers\Api\LeaderboardController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\ChallengeGroupController;
-use App\Http\Controllers\Api\ChallengeMediaController;
 use App\Http\Controllers\Api\ChallengeParticipationController;
 
 // Routes publiques
@@ -110,6 +110,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{challengeGroup}/challenges/{challenge}', [ChallengeGroupController::class, 'removeChallenge']);
         Route::get('/{challengeGroup}/challenges', [ChallengeGroupController::class, 'challenges']);
     });
+
+    // Routes pour les leaderboards (classements)
+    Route::prefix('leaderboards')->group(function () {
+        Route::get('/global', [LeaderboardController::class, 'global']);
+        Route::get('/weekly', [LeaderboardController::class, 'weekly']);
+        Route::get('/monthly', [LeaderboardController::class, 'monthly']);
+        Route::get('/category/{category}', [LeaderboardController::class, 'category']);
+    });
     
     // Routes exclusivement premium (protégées par le middleware premium)
     Route::middleware('premium')->group(function () {
@@ -125,6 +133,11 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/compilations', [MediaController::class, 'getUserCompilations']);
             Route::get('/compilations/{media}', [MediaController::class, 'getCompilationDetails']);
             Route::delete('/compilations/{media}', [MediaController::class, 'deleteCompilation']);
+        });
+
+        // Routes pour les leaderboards premium
+        Route::prefix('leaderboards')->group(function () {
+            Route::get('/premium', [LeaderboardController::class, 'premium']);
         });
         
         // Statistiques avancées
