@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Challenge;
 use Illuminate\Http\Request;
+use App\Services\CacheService;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Http\Requests\StoreChallenge;
+use Illuminate\Support\Facades\Redis;
 use App\Http\Requests\UpdateChallenge;
 use App\Http\Resources\ChallengeResource;
-use App\Services\CacheService;
-use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class ChallengeController extends Controller
 {
@@ -182,41 +183,76 @@ class ChallengeController extends Controller
      */
     public function createFromDraft(Request $request)
     {
-        // Récupérer d'abord le brouillon
-        $draftResponse = $this->getDraft()->getData();
-        
-        if (!$draftResponse->success || !$draftResponse->has_draft) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Aucun brouillon disponible'
-            ], 404);
-        }
-        
-        // Fusionner le brouillon avec les données de la requête
-        $mergedData = array_merge(
-            (array)$draftResponse->draft,
-            $request->except(['_token', '_method'])
-        );
-        
-        // Créer une nouvelle requête avec les données fusionnées
-        $newRequest = Request::create(
-            '/api/challenges',
-            'POST',
-            $mergedData
-        );
-        
-        // Transférer les headers, incluant l'authentification
-        $newRequest->headers->replace($request->headers->all());
-        
-        // Utiliser la méthode store existante
-        $response = $this->store($newRequest);
-        
-        // Si la création a réussi, supprimer le brouillon
-        if ($response->getStatusCode() === 201) {
+        try {
+            // Récupérer d'abord le brouillon
+            $draftResponse = $this->getDraft()->getData();
+            
+            if (!$draftResponse->success || !$draftResponse->has_draft) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucun brouillon disponible'
+                ], 404);
+            }
+            
+            // Fusionner le brouillon avec les données de la requête
+            $mergedData = array_merge(
+                (array)$draftResponse->draft,
+                $request->except(['_token', '_method'])
+            );
+            
+            // Valider les données fusionnées
+            $validator = Validator::make($mergedData, [
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'instructions' => 'required|string',
+                'difficulty' => 'required|in:facile,moyen,difficile',
+                'category_id' => 'required|exists:categories,id',
+                'is_public' => 'boolean',
+                'duration' => 'nullable|integer|min:1',
+            ]);
+            
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            
+            // Créer le challenge
+            $challenge = Challenge::create([
+                'title' => $mergedData['title'],
+                'description' => $mergedData['description'],
+                'instructions' => $mergedData['instructions'],
+                'difficulty' => $mergedData['difficulty'],
+                'category_id' => $mergedData['category_id'],
+                'is_public' => $mergedData['is_public'] ?? false,
+                'duration' => $mergedData['duration'] ?? null,
+                'creator_id' => auth()->id(),
+            ]);
+            
+            // Invalider les caches concernés
+            $this->cacheService->clearCategoriesCache();
+            $this->cacheService->clearUserCache(auth()->id());
+            
+            // Supprimer le brouillon après création réussie
             $this->deleteDraft();
+            
+            return new ChallengeResource($challenge);
+            
+        } catch (\Exception $e) {
+            // Log de l'erreur
+            info('Erreur lors de la création du défi depuis le brouillon :', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'message' => 'Erreur lors de la création du défi depuis le brouillon',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        
-        return $response;
     }
 
     /**
