@@ -92,4 +92,20 @@ class Challenge extends Model
         return $this->participations()
             ->where('status', 'invited');
     }
+
+    /**
+     * Récupère le défi parent de ce défi (si c'est un clone)
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Challenge::class, 'parent_challenge_id');
+    }
+
+    /**
+     * Récupère les clones de ce défi
+     */
+    public function clones(): HasMany
+    {
+        return $this->hasMany(Challenge::class, 'parent_challenge_id');
+    }
 }

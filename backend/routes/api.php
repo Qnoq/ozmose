@@ -76,6 +76,9 @@ Route::middleware(['auth:sanctum', 'cache.active.user', 'rate.limit.requests:def
         // Défis - CRUD
         Route::apiResource('challenges', ChallengeController::class);
         Route::get('/challenges/{challenge}/participants', [ChallengeController::class, 'participants']);
+        // Route pour cloner un défi public
+        Route::post('/challenges/{challenge}/clone', [ChallengeController::class, 'clone']);
+        Route::get('/challenges/{challenge}/clones', [ChallengeController::class, 'clones']);
         
         // Participations aux défis
         Route::post('/challenges/{challenge}/participate', [ChallengeParticipationController::class, 'store']);

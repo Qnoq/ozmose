@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Challenge;
 use Illuminate\Http\Request;
+use App\Models\ChallengeGroup;
 use App\Services\CacheService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
@@ -349,6 +351,29 @@ class ChallengeController extends Controller
     }
 
     /**
+     * Récupérer les clones d'un défi
+     * 
+     * @param Challenge $challenge
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     */
+    public function clones(Challenge $challenge)
+    {
+        // Vérifier si l'utilisateur a accès au défi
+        if (!$challenge->is_public && 
+            $challenge->creator_id !== auth()->id() && 
+            !$challenge->participations()->where('user_id', auth()->id())->exists()) {
+            return response()->json(['message' => 'Accès non autorisé'], 403);
+        }
+        
+        $clones = $challenge->clones()
+            ->with(['creator', 'category'])
+            ->withCount('participations')
+            ->paginate(10);
+        
+        return ChallengeResource::collection($clones);
+    }
+
+    /**
      * Mettre à jour un défi
      */
     public function update(UpdateChallenge $request, Challenge $challenge)
@@ -469,5 +494,117 @@ class ChallengeController extends Controller
         });
         
         return ChallengeResource::collection($challenges);
+    }
+
+    /**
+     * Cloner un défi public
+     * 
+     * @param Request $request
+     * @param Challenge $challenge
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function clone(Request $request, Challenge $challenge)
+    {
+        // Vérifier que le défi est public
+        if (!$challenge->is_public) {
+            return response()->json([
+                'message' => 'Ce défi n\'est pas public et ne peut pas être cloné'
+            ], 403);
+        }
+        
+        // Valider les données de personnalisation (optionnelles)
+        $validated = $request->validate([
+            'title' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+            'instructions' => 'sometimes|string',
+            'is_public' => 'sometimes|boolean',
+            'group_id' => 'sometimes|exists:challenge_groups,id',
+            'skip_media' => 'sometimes|boolean',
+        ]);
+        
+        try {
+            // Début de la transaction
+            DB::beginTransaction();
+            
+            // Cloner le défi avec replicate()
+            $clone = $challenge->replicate(['id', 'created_at', 'updated_at']);
+            
+            // Définir le nouvel utilisateur comme créateur
+            $clone->creator_id = $request->user()->id;
+            
+            // Définir la référence au défi parent
+            $clone->parent_challenge_id = $challenge->id;
+            
+            // Par défaut, les clones sont privés sauf indication contraire
+            $clone->is_public = $validated['is_public'] ?? false;
+            
+            // Appliquer les personnalisations
+            if (isset($validated['title'])) {
+                $clone->title = $validated['title'];
+            }
+            
+            if (isset($validated['description'])) {
+                $clone->description = $validated['description'];
+            }
+            
+            if (isset($validated['instructions'])) {
+                $clone->instructions = $validated['instructions'];
+            }
+            
+            // Sauvegarder le clone
+            $clone->save();
+            
+            // Cloner les médias si demandé
+            if (!$request->has('skip_media') || !$request->skip_media) {
+                foreach ($challenge->media as $media) {
+                    $newMedia = $media->replicate(['id', 'created_at', 'updated_at']);
+                    $newMedia->challenge_id = $clone->id;
+                    $newMedia->save();
+                }
+            }
+            
+            // Si un groupe est spécifié, l'associer au groupe
+            if ($request->has('group_id')) {
+                $group = ChallengeGroup::find($request->group_id);
+                
+                if ($group && ($group->isAdmin($request->user()->id) || $group->creator_id === $request->user()->id)) {
+                    $group->challenges()->attach($clone->id);
+                }
+            }
+            
+            // Invalider les caches concernés
+            $this->cacheService->clearCategoriesCache();
+            $this->cacheService->clearUserCache($request->user()->id);
+            
+            // Valider la transaction
+            DB::commit();
+            
+            // Log de l'action
+            info('Défi cloné avec succès', [
+                'user_id' => $request->user()->id,
+                'original_challenge_id' => $challenge->id,
+                'cloned_challenge_id' => $clone->id
+            ]);
+            
+            return response()->json([
+                'message' => 'Défi cloné avec succès',
+                'challenge' => new ChallengeResource($clone->load(['creator', 'category', 'media']))
+            ], 201);
+        } catch (\Exception $e) {
+            // Annuler la transaction en cas d'erreur
+            DB::rollBack();
+            
+            // Log de l'erreur
+            info('Erreur lors du clonage du défi', [
+                'message' => $e->getMessage(),
+                'user_id' => $request->user()->id,
+                'challenge_id' => $challenge->id
+            ]);
+            
+            return response()->json([
+                'message' => 'Erreur lors du clonage du défi',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
