@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\User;
 use App\Models\Challenge;
 use Illuminate\Http\Request;
+use App\Services\CacheService;
 use App\Services\MediaService;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Services\LeaderboardService;
 use App\Models\ChallengeParticipation;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreChallengeParticipation;
 use App\Http\Requests\UpdateChallengeParticipation;
 use App\Http\Resources\ChallengeParticipationResource;
-use App\Services\CacheService;
-use App\Services\LeaderboardService;
+use App\Notifications\ChallengeInvitationNotification;
 
 class ChallengeParticipationController extends Controller
 {
@@ -556,8 +558,14 @@ class ChallengeParticipationController extends Controller
                     'invitation_message' => $request->message
                 ]);
                 
-                // Envoyer une notification (à implémenter plus tard)
-                // Notification::send(User::find($friendId), new ChallengeInvitationNotification($participation));
+                // Envoyer une notification
+                $user = User::find($friendId);
+                $user->notify(new ChallengeInvitationNotification(
+                    $request->user(),
+                    $challenge,
+                    $participation,
+                    $request->message
+                ));
                 
                 $invitedCount++;
             }

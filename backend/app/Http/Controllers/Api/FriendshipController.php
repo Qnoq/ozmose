@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Friendship;
-use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
+use App\Notifications\FriendRequestNotification;
+use App\Notifications\FriendRequestAcceptedNotification;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class FriendshipController extends Controller
 {
@@ -92,6 +94,9 @@ class FriendshipController extends Controller
             'friend_id' => $user->id,
             'status' => 'pending'
         ]);
+        
+        // Envoyer une notification
+        $user->notify(new FriendRequestNotification(auth()->user()));
 
         return response()->json([
             'message' => 'Demande d\'amitié envoyée avec succès',
@@ -126,6 +131,9 @@ class FriendshipController extends Controller
         // Acceptation de la demande
         $friendship->status = 'accepted';
         $friendship->save();
+
+        // Envoyer une notification
+        $friendship->user->notify(new FriendRequestAcceptedNotification(auth()->user()));
 
         return response()->json([
             'message' => 'Demande d\'amitié acceptée avec succès',

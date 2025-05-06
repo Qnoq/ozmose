@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ChallengeController;
 use App\Http\Controllers\Api\AdminCacheController;
 use App\Http\Controllers\Api\FriendshipController;
 use App\Http\Controllers\Api\LeaderboardController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\ChallengeGroupController;
 use App\Http\Controllers\Api\RateLimitStatsController;
@@ -43,6 +44,15 @@ Route::middleware(['auth:sanctum', 'cache.active.user', 'rate.limit.requests:def
     Route::get('/user/challenges/created', [UserController::class, 'createdChallenges']);
     Route::get('/user/challenges/participating', [UserController::class, 'participatingChallenges']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('/unread', [NotificationController::class, 'unread']);
+        Route::get('/count', [NotificationController::class, 'count']);
+        Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::put('/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{id}', [NotificationController::class, 'destroy']);
+    });
     
     // Routes liées aux fonctionnalités sociales (rate limiting plus strict)
     Route::middleware(['rate.limit.requests:social'])->group(function () {
