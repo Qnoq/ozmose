@@ -61,6 +61,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Détermine si l'utilisateur est administrateur
+     * 
+     * @return bool
+     */
+    public function isAdmin()
+    {
+        return (bool) $this->is_admin;
+    }
+
+    /**
      * Get the challenges created by the user.
      */
     public function createdChallenges(): HasMany

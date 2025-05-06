@@ -1,17 +1,18 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ChallengeController;
+use App\Http\Controllers\Api\AdminCacheController;
 use App\Http\Controllers\Api\FriendshipController;
 use App\Http\Controllers\Api\LeaderboardController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\ChallengeGroupController;
+use App\Http\Controllers\Api\RateLimitStatsController;
 use App\Http\Controllers\Api\ChallengeParticipationController;
-use App\Http\Controllers\Api\AdminCacheController;
 
 // Routes publiques avec rate limiting pour les invités
 Route::middleware(['rate.limit.requests:public'])->group(function () {
@@ -30,6 +31,10 @@ Route::middleware(['auth:sanctum', 'cache.active.user', 'rate.limit.requests:def
         Route::get('/test', [AdminCacheController::class, 'test']);
         Route::get('/keys', [AdminCacheController::class, 'keys']);
         Route::post('/clear', [AdminCacheController::class, 'clear']);
+    });
+
+    Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
+        Route::get('/rate-limit-stats', [RateLimitStatsController::class, 'getStats']);
     });
 
     // Profil utilisateur (rate limiting standard)

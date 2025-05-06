@@ -16,9 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'premium' => \App\Http\Middleware\CheckPremiumAccess::class,
             'cache.active.user' => \App\Http\Middleware\CacheActiveUser::class,
             'rate.limit.requests' => \App\Http\Middleware\RateLimitRequests::class,
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
         ]);
         $middleware->appendToGroup('api', \App\Http\Middleware\CacheActiveUser::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\RateLimitRequests::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\AdminMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
