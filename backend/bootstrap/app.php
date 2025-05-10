@@ -20,7 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->appendToGroup('api', \App\Http\Middleware\CacheActiveUser::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\RateLimitRequests::class);
-        $middleware->appendToGroup('api', \App\Http\Middleware\AdminMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

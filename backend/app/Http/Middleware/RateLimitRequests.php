@@ -211,21 +211,34 @@ class RateLimitRequests
     /**
      * Vérifie si la requête dépasse la limite
      */
+    // protected function isRateLimited($key, $maxAttempts, $decayMinutes)
+    // {
+    //     $redis = Redis::connection()->client();
+        
+    //     // Utiliser un pipeline Redis pour réduire les allers-retours
+    //     $results = $redis->pipeline(function($pipe) use ($key, $decayMinutes) {
+    //         $pipe->incr($key);
+    //         $pipe->expire($key, $decayMinutes * 60);
+    //     });
+        
+    //     $currentAttempts = $results[0];
+        
+    //     return $currentAttempts > $maxAttempts;
+    // }
     protected function isRateLimited($key, $maxAttempts, $decayMinutes)
     {
         $redis = Redis::connection()->client();
         
-        // Utiliser un pipeline Redis pour réduire les allers-retours
-        $results = $redis->pipeline(function($pipe) use ($key, $decayMinutes) {
-            $pipe->incr($key);
-            $pipe->expire($key, $decayMinutes * 60);
-        });
+        // Méthode correcte avec le client Redis moderne
+        $pipeline = $redis->pipeline();
+        $pipeline->incr($key);
+        $pipeline->expire($key, $decayMinutes * 60);
+        $results = $pipeline->exec();
         
         $currentAttempts = $results[0];
         
         return $currentAttempts > $maxAttempts;
     }
-    
     /**
      * Récupère le temps restant avant que les requêtes soient à nouveau autorisées
      */

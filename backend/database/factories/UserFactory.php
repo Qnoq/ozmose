@@ -29,6 +29,16 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'avatar' => null,
+            'bio' => fake()->paragraph(),
+            'preferences' => json_encode(['theme' => 'light', 'notifications' => true]),
+            'is_premium' => false,
+            'is_admin' => false,
+            'premium_until' => null,
+            'subscription_id' => null,
+            'subscription_status' => null,
+            'subscription_plan' => null,
+            'trial_ends_at' => null,
         ];
     }
 
@@ -39,6 +49,29 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the user is premium.
+     */
+    public function premium(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_premium' => true,
+            'premium_until' => now()->addYear(),
+            'subscription_status' => 'active',
+            'subscription_plan' => 'premium',
+        ]);
+    }
+
+    /**
+     * Indicate that the user is an admin.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_admin' => true,
         ]);
     }
 }
