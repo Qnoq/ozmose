@@ -13,29 +13,40 @@ class StoreChallengeParticipation extends FormRequest
      */
     public function authorize(): bool
     {
-        // Autoriser l'utilisateur à participer au défi
-        $challenge = $this->route('challenge');
-        
-        // Vérifier si l'utilisateur participe déjà à ce défi
-        $existingParticipation = ChallengeParticipation::where('user_id', $this->user()->id)
-            ->where('challenge_id', $challenge->id)
-            ->exists();
-            
-        return !$existingParticipation;
+        // Toujours autoriser la requête, la validation gèrera le cas de participation double
+        return true;
     }
-
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
+    
     public function rules(): array
     {
+        $challenge = $this->route('challenge');
+        
         return [
-            // En général, pas besoin de valider des champs pour une participation initiale
-            // puisque les données sont déduites du contexte (user_id, challenge_id)
-            'notes' => 'nullable|string', // Si vous voulez permettre des notes initiales
+            'notes' => 'nullable|string',
+            // Règle personnalisée pour vérifier la participation
+            'user_participation' => [
+                'required',
+                function ($attribute, $value, $fail) use ($challenge) {
+                    $existingParticipation = ChallengeParticipation::where('user_id', $this->user()->id)
+                        ->where('challenge_id', $challenge->id)
+                        ->exists();
+                    
+                    if ($existingParticipation) {
+                        $fail('Vous participez déjà à ce défi');
+                    }
+                },
+            ],
         ];
+    }
+    
+    /**
+     * Préparer les données pour la validation
+     */
+    protected function prepareForValidation()
+    {
+        $this->merge([
+            'user_participation' => true, // Champ fictif pour la validation
+        ]);
     }
     
     /**

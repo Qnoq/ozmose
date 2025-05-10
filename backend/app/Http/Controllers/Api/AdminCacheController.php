@@ -14,17 +14,6 @@ class AdminCacheController extends Controller
     public function __construct(CacheService $cacheService)
     {
         $this->cacheService = $cacheService;
-        
-        // Limiter l'accès aux administrateurs seulement
-        $this->middleware(function ($request, $next) {
-            // Vous devrez adapter cette vérification selon votre logique d'administration
-            // Exemple simple : vérifier un rôle 'admin' ou un ID spécifique
-            if (!auth()->check() || auth()->id() != 1) { // ID 1 généralement pour l'admin
-                return response()->json(['message' => 'Accès non autorisé'], 403);
-            }
-            
-            return $next($request);
-        });
     }
 
     /**

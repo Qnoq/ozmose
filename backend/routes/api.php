@@ -276,6 +276,11 @@ Route::middleware(['auth:sanctum', 'cache.active.user', 'rate.limit.requests:def
             Route::get('/test', [AdminCacheController::class, 'test'])->name('test');
             Route::get('/keys', [AdminCacheController::class, 'keys'])->name('keys');
             Route::post('/clear', [AdminCacheController::class, 'clear'])->name('clear');
+            
+            // Vérification admin
+            Route::get('/check', function() {
+                return response()->json(['is_admin' => true]);
+            })->name('check');
         });
     });
 });
