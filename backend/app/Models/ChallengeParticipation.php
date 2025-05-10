@@ -58,4 +58,105 @@ class ChallengeParticipation extends Model
     {
         return $this->hasMany(ChallengeMedia::class, 'participation_id');
     }
+
+    /**
+     * Récupère les participations aux étapes pour un défi multi-étapes
+     */
+    public function stageParticipations(): HasMany
+    {
+        return $this->hasMany(ChallengeStageParticipation::class, 'participation_id');
+    }
+    
+    /**
+     * Vérifie si toutes les étapes sont complétées
+     * 
+     * @return bool
+     */
+    public function areAllStagesCompleted(): bool
+    {
+        if (!$this->challenge->multi_stage) {
+            return false;
+        }
+        
+        $stagesCount = $this->challenge->stages()->count();
+        $completedCount = $this->stageParticipations()
+            ->where('status', 'completed')
+            ->count();
+            
+        return $stagesCount > 0 && $stagesCount === $completedCount;
+    }
+    
+    /**
+     * Récupère l'étape active actuelle
+     * 
+     * @return ChallengeStageParticipation|null
+     */
+    public function getActiveStage()
+    {
+        if (!$this->challenge->multi_stage) {
+            return null;
+        }
+        
+        return $this->stageParticipations()
+            ->where('status', 'active')
+            ->first();
+    }
+    
+    /**
+     * Récupère la prochaine étape (verrouillée)
+     * 
+     * @return ChallengeStageParticipation|null
+     */
+    public function getNextStage()
+    {
+        if (!$this->challenge->multi_stage) {
+            return null;
+        }
+        
+        $activeStage = $this->getActiveStage();
+        
+        if (!$activeStage) {
+            return null;
+        }
+        
+        $activeStageOrder = $activeStage->stage->order;
+        
+        // Trouver l'étape avec l'ordre immédiatement supérieur
+        $nextStage = $this->challenge->stages()
+            ->where('order', '>', $activeStageOrder)
+            ->orderBy('order')
+            ->first();
+            
+        if (!$nextStage) {
+            return null;
+        }
+        
+        return $this->stageParticipations()
+            ->where('stage_id', $nextStage->id)
+            ->first();
+    }
+    
+    /**
+     * Obtient le pourcentage de progression dans les étapes
+     * 
+     * @return int
+     */
+    public function getStagesProgressPercentage(): int
+    {
+        if (!$this->challenge->multi_stage) {
+            return 0;
+        }
+        
+        $stagesCount = $this->challenge->stages()->count();
+        
+        if ($stagesCount === 0) {
+            return 0;
+        }
+        
+        $completedCount = $this->stageParticipations()
+            ->where('status', 'completed')
+            ->count();
+            
+        return round(($completedCount / $stagesCount) * 100);
+    }
 }

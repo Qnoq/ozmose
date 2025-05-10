@@ -41,6 +41,7 @@ class ChallengeResource extends JsonResource
             'participations' => ChallengeParticipationResource::collection($this->whenLoaded('participations')),
             'media' => ChallengeMediaResource::collection($this->whenLoaded('media')),
             'parent' => new ChallengeResource($this->whenLoaded('parent')),
+            'stages' => ChallengeStageResource::collection($this->whenLoaded('stages')),
         ];
     }
 }

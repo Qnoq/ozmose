@@ -14,6 +14,10 @@ class ChallengeParticipationResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $isMultiStage = $this->whenLoaded('challenge', function () {
+            return $this->challenge->multi_stage ?? false;
+        }, false);
+        
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
@@ -26,6 +30,22 @@ class ChallengeParticipationResource extends JsonResource
             // Relations (quand chargées)
             'user' => new UserResource($this->whenLoaded('user')),
             'challenge' => new ChallengeResource($this->whenLoaded('challenge')),
+            
+            // Champs spécifiques aux défis multi-étapes
+            'is_multi_stage' => $isMultiStage,
+            'active_stage' => $this->when($isMultiStage, function () {
+                $activeStageParticipation = $this->stageParticipations()->where('status', 'active')->first();
+                return $activeStageParticipation ? new ChallengeStageParticipationResource($activeStageParticipation->load('stage')) : null;
+            }),
+            'stages_progress' => $this->when($isMultiStage, function () {
+                $total = $this->stageParticipations()->count();
+                $completed = $this->stageParticipations()->where('status', 'completed')->count();
+                return [
+                    'completed' => $completed,
+                    'total' => $total,
+                    'percentage' => $total > 0 ? round(($completed / $total) * 100) : 0
+                ];
+            }),
         ];
     }
 }

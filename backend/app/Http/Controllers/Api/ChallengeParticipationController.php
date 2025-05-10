@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Services\LeaderboardService;
 use App\Models\ChallengeParticipation;
 use Illuminate\Support\Facades\Storage;
+use App\Models\ChallengeStageParticipation;
 use App\Http\Requests\StoreChallengeParticipation;
 use App\Http\Requests\UpdateChallengeParticipation;
 use App\Http\Resources\ChallengeParticipationResource;
@@ -304,6 +305,11 @@ class ChallengeParticipationController extends Controller
                 'started_at' => now(),
                 'notes' => $request->notes, // Optionnel
             ]);
+            
+            // Si c'est un défi multi-étapes, initialiser les participations aux étapes
+            if ($challenge->multi_stage) {
+                $this->initializeStageParticipations($participation);
+            }
 
             info('Nouvelle participation créée', [
                 'user_id' => $request->user()->id,
@@ -638,5 +644,39 @@ class ChallengeParticipationController extends Controller
             ->get();
             
         return ChallengeParticipationResource::collection($invitations);
+    }
+    
+    /**
+     * Après la création d'une participation à un défi multi-étapes,
+     * initialiser les participations aux étapes.
+     *
+     * @param ChallengeParticipation $participation
+     * @return void
+     */
+    private function initializeStageParticipations(ChallengeParticipation $participation)
+    {
+        // Vérifier si c'est un défi multi-étapes
+        if (!$participation->challenge->multi_stage) {
+            return;
+        }
+        
+        // Récupérer toutes les étapes du défi
+        $stages = $participation->challenge->stages()->orderBy('order')->get();
+        
+        if ($stages->isEmpty()) {
+            return;
+        }
+        
+        // Créer les participations aux étapes
+        foreach ($stages as $index => $stage) {
+            // La première étape est active, les autres sont verrouillées
+            $status = ($index === 0) ? 'active' : 'locked';
+            
+            ChallengeStageParticipation::create([
+                'participation_id' => $participation->id,
+                'stage_id' => $stage->id,
+                'status' => $status
+            ]);
+        }
     }
 }

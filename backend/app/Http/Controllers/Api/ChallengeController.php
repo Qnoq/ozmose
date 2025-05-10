@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Challenge;
 use Illuminate\Http\Request;
 use App\Models\ChallengeGroup;
+use App\Models\ChallengeStage;
 use App\Services\CacheService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -13,8 +14,11 @@ use App\Http\Resources\UserResource;
 use App\Http\Requests\StoreChallenge;
 use Illuminate\Support\Facades\Redis;
 use App\Http\Requests\UpdateChallenge;
+use App\Models\ChallengeParticipation;
 use App\Http\Resources\ChallengeResource;
 use Illuminate\Support\Facades\Validator;
+use App\Models\ChallengeStageParticipation;
+use App\Http\Requests\StoreMultiStageChallenge;
 
 class ChallengeController extends Controller
 {
@@ -606,5 +610,149 @@ class ChallengeController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Crée un nouveau défi multi-étapes
+     * 
+     * @param StoreMultiStageChallenge $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function createMultiStage(StoreMultiStageChallenge $request)
+    {
+        try {
+            // Utiliser une transaction pour garantir l'intégrité des données
+            DB::beginTransaction();
+            
+            // Créer le défi principal
+            $challenge = Challenge::create([
+                'title' => $request->title,
+                'description' => $request->description,
+                'instructions' => $request->instructions,
+                'difficulty' => $request->difficulty,
+                'category_id' => $request->category_id,
+                'is_public' => $request->is_public ?? false,
+                'duration' => $request->duration,
+                'creator_id' => auth()->id(),
+                'multi_stage' => true, // Marquer comme défi multi-étapes
+            ]);
+            
+            // Ajouter les étapes
+            foreach ($request->stages as $stageData) {
+                ChallengeStage::create([
+                    'challenge_id' => $challenge->id,
+                    'title' => $stageData['title'],
+                    'description' => $stageData['description'],
+                    'instructions' => $stageData['instructions'],
+                    'order' => $stageData['order'],
+                    'duration' => $stageData['duration'] ?? null,
+                    'requires_proof' => $stageData['requires_proof'] ?? true,
+                ]);
+            }
+            
+            // Valider les changements
+            DB::commit();
+            
+            // Charger le défi avec ses étapes
+            $challenge->load('stages');
+            
+            // Invalider les caches concernés
+            $this->cacheService->clearCategoriesCache();
+            $this->cacheService->clearUserCache(auth()->id());
+            
+            return response()->json([
+                'message' => 'Défi multi-étapes créé avec succès',
+                'challenge' => new ChallengeResource($challenge)
+            ], 201);
+            
+        } catch (\Exception $e) {
+            // Annuler la transaction en cas d'erreur
+            DB::rollBack();
+            
+            info('Erreur lors de la création du défi multi-étapes', [
+                'message' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+            
+            return response()->json([
+                'message' => 'Erreur lors de la création du défi multi-étapes',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupère les statistiques sur les défis multi-étapes
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getMultiStageStats()
+    {
+        // Vérifier que l'utilisateur est premium
+        if (!auth()->user()->isPremium()) {
+            return response()->json([
+                'message' => 'Cette fonctionnalité est réservée aux utilisateurs premium',
+                'premium_info' => [
+                    'can_upgrade' => true,
+                    'features' => ['Défis multi-étapes', 'Statistiques avancées', 'Et bien plus encore...']
+                ]
+            ], 403);
+        }
+        
+        $userId = auth()->id();
+        
+        // Nombre de défis multi-étapes créés
+        $createdCount = Challenge::where('creator_id', $userId)
+            ->where('multi_stage', true)
+            ->count();
+        
+        // Nombre de défis multi-étapes auxquels l'utilisateur participe
+        $participatingCount = ChallengeParticipation::where('user_id', $userId)
+            ->whereHas('challenge', function ($query) {
+                $query->where('multi_stage', true);
+            })
+            ->count();
+        
+        // Nombre de défis multi-étapes complétés
+        $completedCount = ChallengeParticipation::where('user_id', $userId)
+            ->where('status', 'completed')
+            ->whereHas('challenge', function ($query) {
+                $query->where('multi_stage', true);
+            })
+            ->count();
+        
+        // Étapes complétées au total
+        $completedStagesCount = ChallengeStageParticipation::whereHas('participation', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })
+            ->where('status', 'completed')
+            ->count();
+        
+        // Étapes en cours
+        $activeStagesCount = ChallengeStageParticipation::whereHas('participation', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })
+            ->where('status', 'active')
+            ->count();
+        
+        return response()->json([
+            'created' => [
+                'count' => $createdCount,
+                'percentage' => Challenge::where('creator_id', $userId)->count() > 0 
+                    ? round(($createdCount / Challenge::where('creator_id', $userId)->count()) * 100) 
+                    : 0
+            ],
+            'participating' => [
+                'count' => $participatingCount,
+                'completed_count' => $completedCount,
+                'completion_rate' => $participatingCount > 0 
+                    ? round(($completedCount / $participatingCount) * 100) 
+                    : 0
+            ],
+            'stages' => [
+                'completed_count' => $completedStagesCount,
+                'active_count' => $activeStagesCount
+            ]
+        ]);
     }
 }

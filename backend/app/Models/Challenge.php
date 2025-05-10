@@ -21,6 +21,7 @@ class Challenge extends Model
         'difficulty',
         'is_public',
         'duration',
+        'multi_stage',
     ];
 
     /**
@@ -107,5 +108,15 @@ class Challenge extends Model
     public function clones(): HasMany
     {
         return $this->hasMany(Challenge::class, 'parent_challenge_id');
+    }
+
+    public function isMultiStage(): bool
+    {
+        return $this->multi_stage;
+    }
+
+    public function stages()
+    {
+        return $this->hasMany(ChallengeStage::class)->orderBy('order');
     }
 }
