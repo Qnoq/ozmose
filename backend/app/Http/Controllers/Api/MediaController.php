@@ -163,7 +163,7 @@ class MediaController extends Controller
         // Vérifier que l'utilisateur est premium
         if (!$user->isPremium()) {
             return response()->json([
-                'message' => 'La création de compilations est réservée aux utilisateurs premium',
+                'message' => 'Cette fonctionnalité est réservée aux membres premium',
                 'premium_info' => [
                     'can_upgrade' => true,
                     'features' => ['Création de compilations', 'Qualité vidéo HD', 'Stockage augmenté']
@@ -177,6 +177,7 @@ class MediaController extends Controller
             'title' => 'required|string|max:255',
             'caption' => 'nullable|string|max:500',
             'is_public' => 'nullable|boolean',
+            'challenge_id' => 'required|exists:challenges,id'
         ]);
 
         try {
@@ -186,7 +187,8 @@ class MediaController extends Controller
                 [
                     'title' => $validated['title'],
                     'caption' => $validated['caption'] ?? 'Compilation',
-                    'is_public' => $validated['is_public'] ?? true
+                    'is_public' => $validated['is_public'] ?? true,
+                    'challenge_id' => $validated['challenge_id']
                 ]
             );
 

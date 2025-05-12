@@ -42,6 +42,11 @@ class UserResource extends JsonResource
                 'created_at' => $this->pivot->created_at,
                 'updated_at' => $this->pivot->updated_at,
             ];
+        
+            // Ajouter le rôle si présent dans le pivot
+            if (isset($this->pivot->role)) {
+                $array['role'] = $this->pivot->role;
+            }
         }
         
         return $array;

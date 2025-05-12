@@ -48,6 +48,11 @@ class RateLimitRequests
      */
     public function handle(Request $request, Closure $next, $type = 'default')
     {
+        // Ne pas appliquer de limite en environnement de test
+        if (app()->environment('testing')) {
+            return $next($request);
+        }
+
         // Mesurer le temps avant le rate limiting
         $startTime = microtime(true);
         

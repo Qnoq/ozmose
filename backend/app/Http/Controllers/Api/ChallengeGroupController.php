@@ -2,21 +2,29 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\ChallengeGroup;
-use App\Models\Challenge;
 use App\Models\User;
-use App\Http\Resources\ChallengeGroupResource;
-use App\Http\Resources\ChallengeResource;
-use App\Http\Resources\UserResource;
+use App\Models\Challenge;
 use Illuminate\Http\Request;
+use App\Models\ChallengeGroup;
+use App\Services\LimitsService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
+use App\Http\Resources\ChallengeResource;
+use App\Http\Resources\ChallengeGroupResource;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\JsonResponse;
 
 class ChallengeGroupController extends Controller
 {
+    protected $limitsService;
+
+    public function __construct(LimitsService $limitsService)
+    {
+        $this->limitsService = $limitsService;
+    }
+
     /**
      * Affiche la liste des groupes de l'utilisateur.
      *

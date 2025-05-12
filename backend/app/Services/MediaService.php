@@ -423,7 +423,7 @@ class MediaService
         
         // Vérifier que l'utilisateur est premium
         if (!$user || !method_exists($user, 'isPremium') || !$user->isPremium()) {
-            throw new \Exception('La création de compilations est réservée aux utilisateurs premium');
+            throw new \Exception('Cette fonctionnalité est réservée aux membres premium');
         }
         
         // Vérifier qu'il y a au moins 2 médias
@@ -446,8 +446,9 @@ class MediaService
         // Créer l'enregistrement de compilation
         $compilation = ChallengeMedia::create([
             'user_id' => $user->id,
+            'challenge_id' => $data['challenge_id'],
             'type' => 'compilation',
-            'path' => null, // À remplacer par le chemin réel de la compilation
+            'path' => 'compilations/' . uniqid() . '.mp4', // Remplacer null par un chemin temporaire
             'original_name' => $data['title'] ?? 'Compilation',
             'size' => 0, // À calculer une fois la compilation créée
             'mime_type' => 'video/mp4', // Par défaut pour une compilation
