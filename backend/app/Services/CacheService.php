@@ -5,8 +5,11 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Category;
 use App\Models\Challenge;
+use App\Models\TruthOrDareSession;
+use App\Models\TruthOrDareQuestion;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
 use App\Models\ChallengeParticipation;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\ChallengeResource;
@@ -341,6 +344,58 @@ class CacheService
             return $value === 'test';
         } catch (\Exception $e) {
             return false;
+        }
+    }
+
+    /**
+     * Récupère les questions populaires pour Action ou Vérité
+     */
+    public function getPopularTruthOrDareQuestions($limit = 10)
+    {
+        return Cache::remember(self::PREFIX . "truth-or-dare:questions:popular:{$limit}", self::TTL_MEDIUM, function () use ($limit) {
+            return TruthOrDareQuestion::where('is_official', true)
+                ->orWhere('is_public', true)
+                ->orderByDesc('times_used')
+                ->orderByDesc('rating')
+                ->take($limit)
+                ->get();
+        });
+    }
+
+    /**
+     * Récupère les sessions actives pour le dashboard
+     */
+    public function getActiveTruthOrDareSessions()
+    {
+        return Cache::remember(self::PREFIX . "truth-or-dare:sessions:active", self::TTL_SHORT, function () {
+            return TruthOrDareSession::where('is_active', true)
+                ->withCount('participants')
+                ->orderByDesc('created_at')
+                ->take(10)
+                ->get();
+        });
+    }
+
+    /**
+     * Efface le cache lié à Action ou Vérité
+     */
+    public function clearTruthOrDareCache($type = 'all')
+    {
+        $prefix = self::PREFIX . "truth-or-dare:";
+        
+        switch ($type) {
+            case 'questions':
+                Cache::forget($prefix . 'questions:popular:10');
+                break;
+            case 'sessions':
+                Cache::forget($prefix . 'sessions:active');
+                break;
+            case 'all':
+                $keys = Redis::keys($prefix . '*');
+                if (!empty($keys)) {
+                    Redis::del($keys);
+                }
+                break;
         }
     }
 }

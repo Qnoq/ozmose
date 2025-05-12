@@ -8,12 +8,14 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ChallengeController;
 use App\Http\Controllers\Api\AdminCacheController;
 use App\Http\Controllers\Api\FriendshipController;
-use App\Http\Controllers\Api\ChallengeStageController;
 use App\Http\Controllers\Api\LeaderboardController;
+use App\Http\Controllers\Api\TruthOrDareController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\ChallengeGroupController;
+use App\Http\Controllers\Api\ChallengeStageController;
 use App\Http\Controllers\Api\RateLimitStatsController;
+use App\Http\Controllers\Api\TruthOrDarePartyController;
 use App\Http\Controllers\Api\ChallengeParticipationController;
 use App\Http\Controllers\Api\ChallengeStageParticipationController;
 
@@ -86,6 +88,35 @@ Route::middleware(['auth:sanctum', 'cache.active.user', 'rate.limit.requests:def
             Route::delete('/reject/{friendship}', [FriendshipController::class, 'rejectRequest'])->name('reject');
             Route::delete('/{friendship}', [FriendshipController::class, 'destroy'])->name('destroy');
             Route::get('/requests/pending', [FriendshipController::class, 'pendingRequests'])->name('requests.pending');
+        });
+
+        // Routes publiques Action ou Vérité
+        Route::prefix('truth-or-dare')->name('truth-or-dare.')->group(function () {
+            // Sessions
+            Route::get('/sessions', [TruthOrDareController::class, 'index'])->name('sessions.index');
+            Route::post('/sessions', [TruthOrDareController::class, 'createSession'])->name('sessions.create');
+            Route::post('/sessions/join', [TruthOrDareController::class, 'joinSession'])->name('sessions.join');
+            Route::get('/sessions/{session}', [TruthOrDareController::class, 'show'])->name('sessions.show');
+            Route::delete('/sessions/{session}/leave', [TruthOrDareController::class, 'leaveSession'])->name('sessions.leave');
+            Route::get('/sessions/{session}/stats', [TruthOrDareController::class, 'getSessionStats'])->name('sessions.stats');
+            
+            // Questions
+            Route::get('/questions', [TruthOrDareController::class, 'getQuestions'])->name('questions.index');
+            Route::post('/sessions/{session}/question', [TruthOrDareController::class, 'getRandomQuestion'])->name('sessions.question');
+            
+            // Rounds
+            Route::post('/rounds/{round}/complete', [TruthOrDareController::class, 'completeRound'])->name('rounds.complete');
+            Route::post('/rounds/{round}/skip', [TruthOrDareController::class, 'skipRound'])->name('rounds.skip');
+            
+            // Mode soirée (un seul téléphone)
+            Route::prefix('party')->name('party.')->group(function () {
+                Route::post('/sessions', [TruthOrDarePartyController::class, 'createPartySession'])->name('sessions.create');
+                Route::post('/sessions/{session}/participants', [TruthOrDarePartyController::class, 'addGuestParticipant'])->name('participants.add');
+                Route::delete('/sessions/{session}/participants/{participant}', [TruthOrDarePartyController::class, 'removeGuestParticipant'])->name('participants.remove');
+                Route::get('/sessions/{session}/next-turn', [TruthOrDarePartyController::class, 'getNextTurn'])->name('next-turn');
+                Route::post('/sessions/{session}/spin', [TruthOrDarePartyController::class, 'spinWheel'])->name('spin');
+                Route::post('/sessions/{session}/end', [TruthOrDarePartyController::class, 'endSession'])->name('end');
+            });
         });
     });
     
@@ -259,6 +290,24 @@ Route::middleware(['auth:sanctum', 'cache.active.user', 'rate.limit.requests:def
         
         // Leaderboards premium
         Route::get('/leaderboards/premium', [LeaderboardController::class, 'premium'])->name('leaderboards.premium');
+
+        Route::prefix('truth-or-dare')->name('truth-or-dare.premium.')->group(function () {
+            // Questions personnalisées
+            Route::post('/questions', [TruthOrDareController::class, 'createQuestion'])->name('questions.create');
+            Route::put('/questions/{question}', [TruthOrDareController::class, 'updateQuestion'])->name('questions.update');
+            Route::delete('/questions/{question}', [TruthOrDareController::class, 'deleteQuestion'])->name('questions.delete');
+            
+            // Packs de questions
+            Route::get('/question-packs', [TruthOrDareController::class, 'getQuestionPacks'])->name('packs.index');
+            Route::post('/question-packs', [TruthOrDareController::class, 'createQuestionPack'])->name('packs.create');
+            Route::put('/question-packs/{pack}', [TruthOrDareController::class, 'updateQuestionPack'])->name('packs.update');
+            Route::delete('/question-packs/{pack}', [TruthOrDareController::class, 'deleteQuestionPack'])->name('packs.delete');
+            
+            // Sessions avancées
+            Route::post('/sessions/{session}/settings', [TruthOrDareController::class, 'updateSessionSettings'])->name('sessions.settings');
+            Route::post('/sessions/{session}/archive', [TruthOrDareController::class, 'archiveSession'])->name('sessions.archive');
+            Route::get('/sessions/archived', [TruthOrDareController::class, 'getArchivedSessions'])->name('sessions.archived');
+        });
     });
     
     /*

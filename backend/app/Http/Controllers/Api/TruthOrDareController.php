@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
+use App\Services\CacheService;
 use App\Services\MediaService;
 use App\Models\TruthOrDareRound;
 use App\Models\TruthOrDareSession;
@@ -13,6 +14,87 @@ use App\Models\TruthOrDareParticipant;
 
 class TruthOrDareController extends Controller
 {
+    protected $cacheService;
+
+    public function __construct(CacheService $cacheService)
+    {
+        $this->cacheService = $cacheService;
+    }
+
+    /**
+     * Méthode helper pour invalider le cache des sessions
+     */
+    protected function clearUserSessionsCache($userId)
+    {
+        $pattern = "ozmose:truth-or-dare:sessions:user_{$userId}:*";
+        $keys = \Illuminate\Support\Facades\Redis::keys($pattern);
+        
+        if (!empty($keys)) {
+            \Illuminate\Support\Facades\Redis::del($keys);
+        }
+    }
+
+    /**
+     * Liste des sessions avec cache
+     */
+    public function index(Request $request)
+    {
+        $userId = $request->user()->id;
+        $page = $request->get('page', 1);
+        
+        // Clé de cache unique pour cet utilisateur
+        $cacheKey = "ozmose:truth-or-dare:sessions:user_{$userId}:page_{$page}";
+        
+        $sessions = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($userId) {
+            return TruthOrDareSession::where('creator_id', $userId)
+                ->orWhereHas('participants', function ($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                })
+                ->with(['creator', 'participants'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+        });
+        
+        return response()->json($sessions);
+    }
+
+    /**
+     * Obtenir les questions avec cache
+     */
+    public function getQuestions(Request $request)
+    {
+        $type = $request->get('type');
+        $intensity = $request->get('intensity');
+        $page = $request->get('page', 1);
+        
+        // Construire une clé de cache
+        $cacheKey = "ozmose:truth-or-dare:questions";
+        if ($type) $cacheKey .= ":type_{$type}";
+        if ($intensity) $cacheKey .= ":intensity_{$intensity}";
+        $cacheKey .= ":page_{$page}";
+        
+        $questions = \Illuminate\Support\Facades\Cache::remember($cacheKey, 1800, function () use ($type, $intensity, $request) {
+            $query = TruthOrDareQuestion::query();
+            
+            if ($type) $query->where('type', $type);
+            if ($intensity) $query->where('intensity', $intensity);
+            
+            // Inclure seulement les questions publiques ou de l'utilisateur
+            $query->where(function ($q) use ($request) {
+                $q->where('is_official', true)
+                  ->orWhere('is_public', true);
+                  
+                if ($request->user()) {
+                    $q->orWhere('creator_id', $request->user()->id);
+                }
+            });
+            
+            return $query->paginate(20);
+        });
+        
+        return response()->json($questions);
+    }
+    
     /**
      * Créer une nouvelle session
      */
@@ -68,6 +150,9 @@ class TruthOrDareController extends Controller
             ]);
 
             DB::commit();
+
+            // Invalider le cache des sessions de l'utilisateur
+            $this->clearUserSessionsCache($request->user()->id);
 
             return response()->json([
                 'message' => 'Session créée avec succès',
