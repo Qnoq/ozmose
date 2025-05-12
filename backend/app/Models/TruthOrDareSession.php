@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class TruthOrDareSession extends Model
 {
+    use HasFactory;
+    
     protected $fillable = [
         'creator_id',
         'name',
@@ -26,6 +29,17 @@ class TruthOrDareSession extends Model
         'is_active' => 'boolean',
         'premium_only' => 'boolean',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($session) {
+            if (!$session->join_code) {
+                $session->join_code = static::generateUniqueCode();
+            }
+        });
+    }
 
     public function creator(): BelongsTo
     {
@@ -55,6 +69,15 @@ class TruthOrDareSession extends Model
         
         $this->join_code = $code;
         $this->save();
+        
+        return $code;
+    }
+
+    private static function generateUniqueCode(): string
+    {
+        do {
+            $code = strtoupper(substr(str_shuffle(md5(time() . rand())), 0, 6));
+        } while (static::where('join_code', $code)->exists());
         
         return $code;
     }
