@@ -8,10 +8,18 @@ use Illuminate\Http\Request;
 use App\Models\TruthOrDareSession;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Services\TruthOrDareService;
 use App\Models\TruthOrDareParticipant;
 
 class TruthOrDarePartyController extends Controller
 {
+    protected $truthOrDareService;
+
+    public function __construct(TruthOrDareService $truthOrDareService)
+    {
+        $this->truthOrDareService = $truthOrDareService;
+    }
+
     /**
      * Créer une session en mode soirée (avec invités)
      */
@@ -236,7 +244,7 @@ class TruthOrDarePartyController extends Controller
 
             return response()->json([
                 'message' => 'Session terminée',
-                'final_stats' => $this->getSessionStats($session)->getData()
+                'final_stats' => $this->truthOrDareService->getSessionStats($session)
             ]);
 
         } catch (\Exception $e) {
@@ -255,5 +263,31 @@ class TruthOrDarePartyController extends Controller
     {
         $emojis = ['😀', '😎', '🤪', '😇', '🤩', '😏', '🙃', '🤗', '🤔', '😈'];
         return $emojis[array_rand($emojis)];
+    }
+
+    /**
+     * Retirer un participant pendant la partie
+     */
+    public function removeGuestParticipant(Request $request, TruthOrDareSession $session, TruthOrDareParticipant $participant)
+    {
+        // Vérifier que l'utilisateur est l'hôte
+        if ($session->creator_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Seul l\'hôte peut retirer des participants'
+            ], 403);
+        }
+        
+        // Vérifier que le participant appartient à cette session
+        if ($participant->session_id !== $session->id) {
+            return response()->json([
+                'message' => 'Ce participant n\'appartient pas à cette session'
+            ], 400);
+        }
+        
+        $participant->update(['status' => 'kicked']);
+        
+        return response()->json([
+            'message' => 'Participant retiré'
+        ]);
     }
 }
