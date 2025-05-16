@@ -10,15 +10,18 @@ use App\Models\TruthOrDareSession;
 use Illuminate\Support\Facades\DB;
 use App\Models\TruthOrDareQuestion;
 use App\Http\Controllers\Controller;
+use App\Services\TruthOrDareService;
 use App\Models\TruthOrDareParticipant;
 
 class TruthOrDareController extends Controller
 {
     protected $cacheService;
+    protected $truthOrDareService;
 
-    public function __construct(CacheService $cacheService)
+    public function __construct(CacheService $cacheService, TruthOrDareService $truthOrDareService)
     {
         $this->cacheService = $cacheService;
+        $this->truthOrDareService = $truthOrDareService;
     }
 
     /**
@@ -56,6 +59,59 @@ class TruthOrDareController extends Controller
         });
         
         return response()->json($sessions);
+    }
+
+    /**
+     * Afficher les détails d'une session
+     */
+    public function show(TruthOrDareSession $session, Request $request)
+    {
+        $user = $request->user();
+        
+        // Vérifier que l'utilisateur est participant ou créateur
+        $isParticipant = $session->participants()
+            ->where('user_id', $user->id)
+            ->exists();
+            
+        if (!$isParticipant && $session->creator_id !== $user->id) {
+            return response()->json([
+                'message' => 'Vous n\'avez pas accès à cette session'
+            ], 403);
+        }
+        
+        return response()->json([
+            'session' => $session->load(['creator', 'participants', 'rounds'])
+        ]);
+    }
+
+    /**
+     * Quitter une session
+     */
+    public function leaveSession(TruthOrDareSession $session, Request $request)
+    {
+        $user = $request->user();
+        
+        $participant = TruthOrDareParticipant::where('session_id', $session->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->first();
+            
+        if (!$participant) {
+            return response()->json([
+                'message' => 'Vous n\'êtes pas participant actif de cette session'
+            ], 404);
+        }
+        
+        // Si c'est le créateur qui quitte, désactiver la session
+        if ($session->creator_id === $user->id) {
+            $session->update(['is_active' => false]);
+        }
+        
+        $participant->update(['status' => 'left']);
+        
+        return response()->json([
+            'message' => 'Vous avez quitté la session'
+        ]);
     }
 
     /**
@@ -396,26 +452,147 @@ class TruthOrDareController extends Controller
      */
     public function getSessionStats(TruthOrDareSession $session)
     {
-        $stats = [
-            'total_rounds' => $session->rounds()->count(),
-            'completed_rounds' => $session->rounds()->where('status', 'completed')->count(),
-            'skipped_rounds' => $session->rounds()->where('status', 'skipped')->count(),
-            'participants' => $session->participants()
-                ->with('user:id,name')
-                ->get()
-                ->map(function ($participant) {
-                    return [
-                        'user' => $participant->user,
-                        'truths_answered' => $participant->truths_answered,
-                        'dares_completed' => $participant->dares_completed,
-                        'skips_used' => $participant->skips_used,
-                        'total_score' => $participant->truths_answered + $participant->dares_completed * 2
-                    ];
-                })
-                ->sortByDesc('total_score')
-                ->values()
-        ];
-
+        $stats = $this->truthOrDareService->getSessionStats($session);
         return response()->json($stats);
+    }
+
+    /**
+     * Créer une question personnalisée (Premium)
+     */
+    public function createQuestion(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|in:truth,dare',
+            'content' => 'required|string|max:500',
+            'intensity' => 'required|in:soft,spicy,hot',
+            'category_id' => 'nullable|exists:categories,id',
+            'is_public' => 'boolean'
+        ]);
+        
+        $question = TruthOrDareQuestion::create([
+            'creator_id' => $request->user()->id,
+            'type' => $validated['type'],
+            'content' => $validated['content'],
+            'intensity' => $validated['intensity'],
+            'category_id' => $validated['category_id'] ?? null,
+            'is_public' => $validated['is_public'] ?? false,
+            'is_official' => false
+        ]);
+        
+        // Invalider le cache des questions
+        $this->cacheService->clearTruthOrDareCache('questions');
+        
+        return response()->json([
+            'message' => 'Question créée avec succès',
+            'question' => $question
+        ], 201);
+    }
+
+    /**
+     * Modifier une question (Premium)
+     */
+    public function updateQuestion(Request $request, TruthOrDareQuestion $question)
+    {
+        // Vérifier que l'utilisateur est le créateur
+        if ($question->creator_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Vous n\'êtes pas autorisé à modifier cette question'
+            ], 403);
+        }
+        
+        $validated = $request->validate([
+            'content' => 'sometimes|string|max:500',
+            'intensity' => 'sometimes|in:soft,spicy,hot',
+            'is_public' => 'sometimes|boolean'
+        ]);
+        
+        $question->update($validated);
+        
+        // Invalider le cache
+        $this->cacheService->clearTruthOrDareCache('questions');
+        
+        return response()->json([
+            'message' => 'Question modifiée avec succès',
+            'question' => $question
+        ]);
+    }
+
+    /**
+     * Supprimer une question (Premium)
+     */
+    public function deleteQuestion(Request $request, TruthOrDareQuestion $question)
+    {
+        if ($question->creator_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Vous n\'êtes pas autorisé à supprimer cette question'
+            ], 403);
+        }
+        
+        $question->delete();
+        
+        // Invalider le cache
+        $this->cacheService->clearTruthOrDareCache('questions');
+        
+        return response()->json([
+            'message' => 'Question supprimée avec succès'
+        ]);
+    }
+
+    /**
+     * Obtenir les packs de questions (Premium)
+     */
+    public function getQuestionPacks(Request $request)
+    {
+        // Implémenter selon votre logique de packs
+        return response()->json([
+            'packs' => [
+                [
+                    'id' => 1,
+                    'name' => 'Pack Romantique',
+                    'description' => 'Questions pour couples',
+                    'questions_count' => 50,
+                    'intensity' => 'soft'
+                ],
+                [
+                    'id' => 2,
+                    'name' => 'Pack Soirée Épicée',
+                    'description' => 'Questions pour soirées entre amis',
+                    'questions_count' => 100,
+                    'intensity' => 'spicy'
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Archiver une session (Premium)
+     */
+    public function archiveSession(Request $request, TruthOrDareSession $session)
+    {
+        if ($session->creator_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Seul le créateur peut archiver la session'
+            ], 403);
+        }
+        
+        $session->update(['is_active' => false]);
+        
+        return response()->json([
+            'message' => 'Session archivée avec succès'
+        ]);
+    }
+
+    /**
+     * Obtenir les sessions archivées (Premium)
+     */
+    public function getArchivedSessions(Request $request)
+    {
+        $sessions = TruthOrDareSession::where('creator_id', $request->user()->id)
+            ->where('is_active', false)
+            ->with(['participants'])
+            ->orderBy('updated_at', 'desc')
+            ->paginate(10);
+            
+        return response()->json($sessions);
     }
 }
