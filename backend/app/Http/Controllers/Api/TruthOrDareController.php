@@ -195,6 +195,9 @@ class TruthOrDareController extends Controller
                 'premium_only' => false,
             ]);
 
+            // Générer un code de session
+            $session->generateJoinCode();
+
             // Ajouter le créateur comme participant
             TruthOrDareParticipant::create([
                 'session_id' => $session->id,
