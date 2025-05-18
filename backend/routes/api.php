@@ -96,13 +96,13 @@ Route::middleware(['auth:sanctum', 'cache.active.user', 'rate.limit.requests:def
             Route::get('/sessions', [TruthOrDareController::class, 'index'])->name('sessions.index');
             Route::post('/sessions', [TruthOrDareController::class, 'createSession'])->name('sessions.create');
             Route::post('/sessions/join', [TruthOrDareController::class, 'joinSession'])->name('sessions.join');
-            Route::get('/sessions/{session}', [TruthOrDareController::class, 'show'])->name('sessions.show');
-            Route::delete('/sessions/{session}/leave', [TruthOrDareController::class, 'leaveSession'])->name('sessions.leave');
-            Route::get('/sessions/{session}/stats', [TruthOrDareController::class, 'getSessionStats'])->name('sessions.stats');
+            Route::get('/sessions/{truthOrDareSession}', [TruthOrDareController::class, 'show'])->name('sessions.show');
+            Route::delete('/sessions/{truthOrDareSession}/leave', [TruthOrDareController::class, 'leaveSession'])->name('sessions.leave');
+            Route::get('/sessions/{truthOrDareSession}/stats', [TruthOrDareController::class, 'getSessionStats'])->name('sessions.stats');
             
             // Questions
             Route::get('/questions', [TruthOrDareController::class, 'getQuestions'])->name('questions.index');
-            Route::post('/sessions/{session}/question', [TruthOrDareController::class, 'getRandomQuestion'])->name('sessions.question');
+            Route::post('/sessions/{truthOrDareSession}/question', [TruthOrDareController::class, 'getRandomQuestion'])->name('sessions.question');
             
             // Rounds
             Route::post('/rounds/{round}/complete', [TruthOrDareController::class, 'completeRound'])->name('rounds.complete');
@@ -111,11 +111,11 @@ Route::middleware(['auth:sanctum', 'cache.active.user', 'rate.limit.requests:def
             // Mode soirée (un seul téléphone)
             Route::prefix('party')->name('party.')->group(function () {
                 Route::post('/sessions', [TruthOrDarePartyController::class, 'createPartySession'])->name('sessions.create');
-                Route::post('/sessions/{session}/participants', [TruthOrDarePartyController::class, 'addGuestParticipant'])->name('participants.add');
-                Route::delete('/sessions/{session}/participants/{participant}', [TruthOrDarePartyController::class, 'removeGuestParticipant'])->name('participants.remove');
-                Route::get('/sessions/{session}/next-turn', [TruthOrDarePartyController::class, 'getNextTurn'])->name('next-turn');
-                Route::post('/sessions/{session}/spin', [TruthOrDarePartyController::class, 'spinWheel'])->name('spin');
-                Route::post('/sessions/{session}/end', [TruthOrDarePartyController::class, 'endSession'])->name('end');
+                Route::post('/sessions/{truthOrDareSession}/participants', [TruthOrDarePartyController::class, 'addGuestParticipant'])->name('participants.add');
+                Route::delete('/sessions/{truthOrDareSession}/participants/{participant}', [TruthOrDarePartyController::class, 'removeGuestParticipant'])->name('participants.remove');
+                Route::get('/sessions/{truthOrDareSession}/next-turn', [TruthOrDarePartyController::class, 'getNextTurn'])->name('next-turn');
+                Route::post('/sessions/{truthOrDareSession}/spin', [TruthOrDarePartyController::class, 'spinWheel'])->name('spin');
+                Route::post('/sessions/{truthOrDareSession}/end', [TruthOrDarePartyController::class, 'endSession'])->name('end');
             });
         });
     });

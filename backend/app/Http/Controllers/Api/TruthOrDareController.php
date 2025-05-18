@@ -449,6 +449,7 @@ class TruthOrDareController extends Controller
      */
     public function getSessionStats(TruthOrDareSession $session)
     {
+        info('getSessionStats');
         $stats = $this->truthOrDareService->getSessionStats($session);
         return response()->json($stats);
     }
