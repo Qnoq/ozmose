@@ -35,9 +35,10 @@ class TruthOrDarePartyController extends Controller
         ]);
 
         $user = $request->user();
-
+        
         DB::beginTransaction();
         try {
+            
             // Créer la session
             $session = TruthOrDareSession::create([
                 'creator_id' => $user->id,
@@ -47,7 +48,7 @@ class TruthOrDarePartyController extends Controller
                 'is_active' => true,
                 'max_participants' => count($validated['participants']) + 1,
             ]);
-
+            
             // Ajouter l'hôte s'il joue
             if ($validated['include_host'] ?? true) {
                 TruthOrDareParticipant::create([
@@ -88,32 +89,34 @@ class TruthOrDarePartyController extends Controller
     /**
      * Ajouter un participant pendant la partie
      */
-    public function addGuestParticipant(Request $request, TruthOrDareSession $session)
+    public function addGuestParticipant(Request $request, TruthOrDareSession $truthOrDareSession)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:50',
             'avatar' => 'nullable|string|max:5'
         ]);
 
+        $user = $request->user();
+       
         // Vérifier que l'utilisateur est l'hôte
-        if ($session->creator_id !== $request->user()->id) {
+        if ($truthOrDareSession->creator_id !== $request->user()->id) {
             return response()->json([
                 'message' => 'Seul l\'hôte peut ajouter des participants'
             ], 403);
         }
 
         // Vérifier la limite
-        if ($session->activeParticipants()->count() >= $session->max_participants) {
+        if ($truthOrDareSession->activeParticipants()->count() >= $truthOrDareSession->max_participants) {
             return response()->json([
                 'message' => 'La session est complète'
             ], 400);
         }
 
         // Déterminer l'ordre de tour
-        $maxOrder = $session->participants()->max('turn_order') ?? 0;
+        $maxOrder = $truthOrDareSession->participants()->max('turn_order') ?? 0;
 
         $participant = TruthOrDareParticipant::create([
-            'session_id' => $session->id,
+            'session_id' => $truthOrDareSession->id,
             'guest_name' => $validated['name'],
             'guest_avatar' => $validated['avatar'] ?? $this->getRandomEmoji(),
             'status' => 'active',
@@ -129,14 +132,14 @@ class TruthOrDarePartyController extends Controller
     /**
      * Gérer les tours de jeu
      */
-    public function getNextTurn(TruthOrDareSession $session)
+    public function getNextTurn(TruthOrDareSession $truthOrDareSession)
     {
         // Récupérer le dernier round
-        $lastRound = $session->rounds()->latest()->first();
+        $lastRound = $truthOrDareSession->rounds()->latest()->first();
         
         if (!$lastRound) {
             // Premier tour
-            $nextParticipant = $session->participants()
+            $nextParticipant = $truthOrDareSession->participants()
                 ->where('status', 'active')
                 ->orderBy('turn_order')
                 ->first();
@@ -145,7 +148,7 @@ class TruthOrDarePartyController extends Controller
             $lastParticipant = $lastRound->participant;
             
             // Trouver le suivant dans l'ordre
-            $nextParticipant = $session->participants()
+            $nextParticipant = $truthOrDareSession->participants()
                 ->where('status', 'active')
                 ->where('turn_order', '>', $lastParticipant->turn_order)
                 ->orderBy('turn_order')
@@ -153,7 +156,7 @@ class TruthOrDarePartyController extends Controller
             
             // Si on est à la fin, recommencer
             if (!$nextParticipant) {
-                $nextParticipant = $session->participants()
+                $nextParticipant = $truthOrDareSession->participants()
                     ->where('status', 'active')
                     ->orderBy('turn_order')
                     ->first();
@@ -173,9 +176,9 @@ class TruthOrDarePartyController extends Controller
     /**
      * Mode "Roue de la fortune" - Sélection aléatoire
      */
-    public function spinWheel(TruthOrDareSession $session)
+    public function spinWheel(TruthOrDareSession $truthOrDareSession)
     {
-        $participants = $session->activeParticipants()->get();
+        $participants = $truthOrDareSession->activeParticipants()->get();
         
         if ($participants->isEmpty()) {
             return response()->json([
@@ -198,7 +201,7 @@ class TruthOrDarePartyController extends Controller
     /**
      * Terminer la session et sauvegarder les stats (optionnel)
      */
-    public function endSession(Request $request, TruthOrDareSession $session)
+    public function endSession(Request $request, TruthOrDareSession $truthOrDareSession)
     {
         $validated = $request->validate([
             'save_stats' => 'boolean',
@@ -208,7 +211,7 @@ class TruthOrDarePartyController extends Controller
         ]);
 
         // Vérifier que l'utilisateur est l'hôte
-        if ($session->creator_id !== $request->user()->id) {
+        if ($truthOrDareSession->creator_id !== $request->user()->id) {
             return response()->json([
                 'message' => 'Seul l\'hôte peut terminer la session'
             ], 403);
@@ -238,13 +241,13 @@ class TruthOrDarePartyController extends Controller
             }
 
             // Marquer la session comme inactive
-            $session->update(['is_active' => false]);
+            $truthOrDareSession->update(['is_active' => false]);
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Session terminée',
-                'final_stats' => $this->truthOrDareService->getSessionStats($session)
+                'final_stats' => $this->truthOrDareService->getSessionStats($truthOrDareSession)
             ]);
 
         } catch (\Exception $e) {
@@ -268,17 +271,17 @@ class TruthOrDarePartyController extends Controller
     /**
      * Retirer un participant pendant la partie
      */
-    public function removeGuestParticipant(Request $request, TruthOrDareSession $session, TruthOrDareParticipant $participant)
+    public function removeGuestParticipant(Request $request, TruthOrDareSession $truthOrDareSession, TruthOrDareParticipant $participant)
     {
         // Vérifier que l'utilisateur est l'hôte
-        if ($session->creator_id !== $request->user()->id) {
+        if ($truthOrDareSession->creator_id !== $request->user()->id) {
             return response()->json([
                 'message' => 'Seul l\'hôte peut retirer des participants'
             ], 403);
         }
         
         // Vérifier que le participant appartient à cette session
-        if ($participant->session_id !== $session->id) {
+        if ($participant->session_id !== $truthOrDareSession->id) {
             return response()->json([
                 'message' => 'Ce participant n\'appartient pas à cette session'
             ], 400);

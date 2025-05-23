@@ -306,7 +306,7 @@ Route::middleware(['auth:sanctum', 'cache.active.user', 'rate.limit.requests:def
             // Sessions avancées
             Route::post('/sessions/{session}/settings', [TruthOrDareController::class, 'updateSessionSettings'])->name('sessions.settings');
             Route::post('/sessions/{session}/archive', [TruthOrDareController::class, 'archiveSession'])->name('sessions.archive');
-            Route::get('/sessions/archived', [TruthOrDareController::class, 'getArchivedSessions'])->name('sessions.archived');
+            Route::get('/archived/sessions', [TruthOrDareController::class, 'getArchivedSessions'])->name('sessions.archived');
         });
     });
     

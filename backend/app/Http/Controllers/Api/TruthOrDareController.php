@@ -64,23 +64,23 @@ class TruthOrDareController extends Controller
     /**
      * Afficher les détails d'une session
      */
-    public function show(TruthOrDareSession $session, Request $request)
+    public function show(TruthOrDareSession $truthOrDareSession, Request $request)
     {
         $user = $request->user();
         
         // Vérifier que l'utilisateur est participant ou créateur
-        $isParticipant = $session->participants()
+        $isParticipant = $truthOrDareSession->participants()
             ->where('user_id', $user->id)
             ->exists();
-            
-        if (!$isParticipant && $session->creator_id !== $user->id) {
+        
+        if (!$isParticipant && $truthOrDareSession->creator_id !== $user->id) {
             return response()->json([
                 'message' => 'Vous n\'avez pas accès à cette session'
             ], 403);
         }
         
         return response()->json([
-            'session' => $session->load(['creator', 'participants', 'rounds'])
+            'session' => $truthOrDareSession->load(['creator', 'participants', 'rounds'])
         ]);
     }
 
@@ -289,44 +289,44 @@ class TruthOrDareController extends Controller
     /**
      * Obtenir une question aléatoire
      */
-    public function getRandomQuestion(Request $request, TruthOrDareSession $session)
+    public function getRandomQuestion(Request $request, TruthOrDareSession $truthOrDareSession)
     {
         $validated = $request->validate([
             'type' => 'required|in:truth,dare',
         ]);
 
         $user = $request->user();
-
+        
         // Vérifier que l'utilisateur est participant actif
-        $participant = TruthOrDareParticipant::where('session_id', $session->id)
+        $participant = TruthOrDareParticipant::where('session_id', $truthOrDareSession->id)
             ->where('user_id', $user->id)
             ->where('status', 'active')
             ->first();
-
+        
         if (!$participant) {
             return response()->json([
                 'message' => 'Vous n\'êtes pas participant actif de cette session'
             ], 403);
         }
-
+        
         // Récupérer une question aléatoire
         $query = TruthOrDareQuestion::where('type', $validated['type'])
-            ->where('intensity', '<=', $session->intensity);
-
+            ->where('intensity', '<=', $truthOrDareSession->intensity);
+            
         // Inclure les questions officielles et publiques
         $query->where(function ($q) use ($user) {
             $q->where('is_official', true)
               ->orWhere('is_public', true)
               ->orWhere('creator_id', $user->id);
         });
-
+        
         // Exclure les questions premium pour les non-premium
         if (!$user->isPremium()) {
             $query->where('is_premium', false);
         }
-
+        
         // Exclure les questions déjà utilisées dans cette session
-        $usedQuestionIds = TruthOrDareRound::where('session_id', $session->id)
+        $usedQuestionIds = TruthOrDareRound::where('session_id', $truthOrDareSession->id)
             ->pluck('question_id');
             
         if ($usedQuestionIds->isNotEmpty()) {
@@ -334,7 +334,7 @@ class TruthOrDareController extends Controller
         }
 
         $question = $query->inRandomOrder()->first();
-
+        
         if (!$question) {
             return response()->json([
                 'message' => 'Aucune question disponible'
@@ -343,7 +343,7 @@ class TruthOrDareController extends Controller
 
         // Créer un nouveau round
         $round = TruthOrDareRound::create([
-            'session_id' => $session->id,
+            'session_id' => $truthOrDareSession->id,
             'participant_id' => $participant->id,
             'question_id' => $question->id,
             'choice' => $validated['type'],
@@ -368,7 +368,7 @@ class TruthOrDareController extends Controller
         ]);
 
         $user = $request->user();
-
+        
         // Vérifier que c'est bien le participant du round
         if ($round->participant->user_id !== $user->id) {
             return response()->json([
