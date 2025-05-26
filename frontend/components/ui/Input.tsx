@@ -1,12 +1,12 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
 import React, { useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TextInputProps,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TextInput,
+  TextInputProps,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { IconSymbol } from './IconSymbol';
 
@@ -33,17 +33,20 @@ export function Input({
   secureTextEntry,
   ...props
 }: InputProps) {
+  // ✅ IMPORTANT: Tous les hooks en premier, inconditionnellement
   const [isSecure, setIsSecure] = useState(secureTextEntry);
   const [isFocused, setIsFocused] = useState(false);
-  
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
+  const mutedColor = useThemeColor({ light: '#9CA3AF', dark: '#6B7280' }, 'text');
+  const lightBorderColor = useThemeColor({ light: '#E1E5E9', dark: '#374151' }, 'text');
 
+  // Calculs dérivés après les hooks
   const borderColor = error
     ? '#FF6B6B'
     : isFocused
     ? '#FF4B8B'
-    : useThemeColor({ light: '#E1E5E9', dark: '#374151' }, 'text');
+    : lightBorderColor;
 
   const toggleSecureEntry = () => {
     setIsSecure(!isSecure);
@@ -88,7 +91,7 @@ export function Input({
             <IconSymbol
               name={leftIcon as any}
               size={20}
-              color={useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'text')}
+              color={mutedColor}
             />
           </View>
         )}
@@ -102,7 +105,7 @@ export function Input({
             },
             leftIcon && { paddingLeft: 0 },
           ]}
-          placeholderTextColor={useThemeColor({ light: '#9CA3AF', dark: '#6B7280' }, 'text')}
+          placeholderTextColor={mutedColor}
           secureTextEntry={isSecure}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -116,7 +119,7 @@ export function Input({
             <IconSymbol
               name={getRightIcon() as any}
               size={20}
-              color={useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'text')}
+              color={mutedColor}
             />
           </TouchableOpacity>
         )}
@@ -127,7 +130,7 @@ export function Input({
       )}
       
       {hint && !error && (
-        <Text style={[styles.hint, { color: useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'text') }]}>
+        <Text style={[styles.hint, { color: mutedColor }]}>
           {hint}
         </Text>
       )}

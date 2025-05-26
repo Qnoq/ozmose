@@ -7,11 +7,11 @@ import 'react-native-reanimated';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isInitialized } = useAuth(); // ← Ajouter isInitialized
   const segments = useSegments();
   
   const [loaded] = useFonts({
@@ -19,25 +19,37 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (!loaded) return;
+    // Ne pas faire de navigation tant que les fonts et l'auth ne sont pas initialisés
+    if (!loaded || !isInitialized) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
-    if (!isLoading) {
-      if (!isAuthenticated && !inAuthGroup) {
-        // Rediriger vers la connexion si pas authentifié
-        router.replace('/(auth)/login');
-      } else if (isAuthenticated && inAuthGroup) {
-        // Rediriger vers l'app si authentifié
-        router.replace('/(tabs)');
-      }
+    if (!isAuthenticated && !inAuthGroup) {
+      // Utilisateur pas connecté → rediriger vers login
+      router.replace('/(auth)/login');
+    } else if (isAuthenticated && inAuthGroup) {
+      // Utilisateur connecté mais sur page d'auth → rediriger vers app
+      router.replace('/(tabs)');
     }
-  }, [isAuthenticated, isLoading, loaded, segments]);
+  }, [isAuthenticated, isInitialized, loaded, segments]); // ← Dépendances mises à jour
 
-  if (!loaded || isLoading) {
+  // Afficher le loading tant que les fonts ou l'auth ne sont pas prêts
+  if (!loaded || !isInitialized) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: colorScheme === 'dark' ? '#151718' : '#fff'
+      }}>
         <ActivityIndicator size="large" color="#FF4B8B" />
+        <Text style={{ 
+          marginTop: 16, 
+          fontSize: 16,
+          color: colorScheme === 'dark' ? '#ECEDEE' : '#11181C'
+        }}>
+          Chargement d'Ozmose...
+        </Text>
       </View>
     );
   }

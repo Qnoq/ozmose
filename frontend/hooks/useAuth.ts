@@ -1,11 +1,12 @@
+import { authService, LoginCredentials, RegisterCredentials, User } from '@/services/auth.service';
 import { useEffect, useState } from 'react';
-import { authService, LoginCredentials, RegisterCredentials, User } from '../services/auth.service';
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   error: string | null;
+  isInitialized: boolean; // ← Nouveau flag
 }
 
 export function useAuth() {
@@ -14,6 +15,7 @@ export function useAuth() {
     isLoading: true,
     isAuthenticated: false,
     error: null,
+    isInitialized: false, // ← Commence par false
   });
 
   // Initialisation - vérifier si l'utilisateur est connecté
@@ -29,7 +31,7 @@ export function useAuth() {
       const isAuth = await authService.isAuthenticated();
       
       if (isAuth) {
-        // Récupérer les données utilisateur (du cache ou de l'API)
+        // Récupérer les données utilisateur du cache d'abord
         const cachedUser = await authService.getCachedUser();
         if (cachedUser) {
           setState({
@@ -37,15 +39,26 @@ export function useAuth() {
             isLoading: false,
             isAuthenticated: true,
             error: null,
+            isInitialized: true, // ← Marquer comme initialisé
           });
+          
+          // Optionnel : rafraîchir les données en arrière-plan
+          try {
+            const currentUser = await authService.getCurrentUser();
+            setState(prev => ({ ...prev, user: currentUser }));
+          } catch (error) {
+            // Si le rafraîchissement échoue, garder les données du cache
+            console.warn('Failed to refresh user data:', error);
+          }
         } else {
-          // Si pas de cache, récupérer depuis l'API
+          // Pas de cache, récupérer depuis l'API
           const currentUser = await authService.getCurrentUser();
           setState({
             user: currentUser,
             isLoading: false,
             isAuthenticated: true,
             error: null,
+            isInitialized: true,
           });
         }
       } else {
@@ -54,14 +67,17 @@ export function useAuth() {
           isLoading: false,
           isAuthenticated: false,
           error: null,
+          isInitialized: true, // ← Marquer comme initialisé même si pas connecté
         });
       }
     } catch (error: any) {
+      console.error('Auth initialization error:', error);
       setState({
         user: null,
         isLoading: false,
         isAuthenticated: false,
         error: error.message || 'Erreur d\'initialisation',
+        isInitialized: true, // ← Marquer comme initialisé même en cas d'erreur
       });
     }
   };
@@ -78,6 +94,7 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: true,
         error: null,
+        isInitialized: true,
       });
       
       return response;
@@ -103,6 +120,7 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: true,
         error: null,
+        isInitialized: true,
       });
       
       return response;
@@ -128,6 +146,7 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: false,
         error: null,
+        isInitialized: true,
       });
     } catch (error: any) {
       // Même si la déconnexion échoue, on considère l'utilisateur comme déconnecté
@@ -136,6 +155,7 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: false,
         error: null,
+        isInitialized: true,
       });
     }
   };
@@ -201,6 +221,7 @@ export function useAuth() {
     isLoading: state.isLoading,
     isAuthenticated: state.isAuthenticated,
     error: state.error,
+    isInitialized: state.isInitialized, // ← Nouveau flag exposé
     
     // Actions
     login,

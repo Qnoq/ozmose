@@ -37,11 +37,6 @@ export interface AuthResponse {
   message?: string;
 }
 
-export interface ApiError {
-  message: string;
-  errors?: Record<string, string[]>;
-}
-
 class AuthService {
   // Connexion utilisateur
   public async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -110,17 +105,32 @@ class AuthService {
     }
   }
 
-  // Vérifier si l'utilisateur est connecté et le token valide
+  // Vérifier si l'utilisateur est connecté (VERSION OPTIMISÉE)
   public async isAuthenticated(): Promise<boolean> {
     try {
       const token = await storageService.getToken();
-      if (!token) return false;
+      if (!token) {
+        return false;
+      }
       
-      // Vérifier la validité du token avec l'API
-      await this.getCurrentUser();
-      return true;
+      // ✨ OPTIMISATION : Si on a un token ET des données utilisateur en cache,
+      // on considère l'utilisateur comme authentifié sans appeler l'API
+      const cachedUser = await storageService.getUserData();
+      if (cachedUser) {
+        return true;
+      }
+      
+      // Si pas de cache utilisateur, vérifier avec l'API
+      try {
+        await this.getCurrentUser();
+        return true;
+      } catch (error) {
+        // Token invalide, nettoyer le stockage
+        await storageService.clearAll();
+        return false;
+      }
     } catch (error) {
-      // Si erreur, nettoyer le stockage et considérer comme non authentifié
+      // En cas d'erreur, considérer comme non authentifié
       await storageService.clearAll();
       return false;
     }
@@ -129,6 +139,13 @@ class AuthService {
   // Récupérer les données utilisateur du cache local
   public async getCachedUser(): Promise<User | null> {
     return await storageService.getUserData();
+  }
+
+  // Vérification rapide sans appel API (pour l'initialisation)
+  public async hasValidSession(): Promise<boolean> {
+    const token = await storageService.getToken();
+    const user = await storageService.getUserData();
+    return !!(token && user);
   }
 
   // Demande de réinitialisation de mot de passe
@@ -154,24 +171,6 @@ class AuthService {
     }
   }
 
-  // Vérification de l'email (si implémenté dans l'API)
-  public async verifyEmail(token: string): Promise<{ message: string }> {
-    try {
-      return await apiService.post('/email/verify', { token });
-    } catch (error) {
-      throw new Error('Erreur lors de la vérification de l\'email');
-    }
-  }
-
-  // Renvoyer l'email de vérification
-  public async resendVerificationEmail(): Promise<{ message: string }> {
-    try {
-      return await apiService.post('/email/verification-notification');
-    } catch (error) {
-      throw new Error('Erreur lors de l\'envoi de l\'email de vérification');
-    }
-  }
-
   // Gestion des erreurs d'authentification
   private handleAuthError(error: any, defaultMessage: string): Error {
     if (error.response?.status === 401) {
@@ -189,6 +188,8 @@ class AuthService {
       }
     } else if (error.response?.status === 429) {
       return new Error('Trop de tentatives, veuillez patienter');
+    } else if (!error.response) {
+      return new Error('Erreur de connexion réseau');
     } else {
       return new Error(defaultMessage);
     }

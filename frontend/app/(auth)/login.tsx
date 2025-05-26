@@ -5,26 +5,27 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
+  // ✅ IMPORTANT: Tous les hooks doivent être appelés en premier, inconditionnellement
   const { login, isLoading, error, clearError } = useAuth();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -52,7 +53,7 @@ export default function LoginScreen() {
       clearError();
       await login(formData);
       // Navigation sera gérée automatiquement par le système d'auth
-      router.replace('/(app)/(tabs)');
+      router.replace('/(tabs)');
     } catch (error: any) {
       Alert.alert('Erreur de connexion', error.message);
     }
@@ -133,11 +134,9 @@ export default function LoginScreen() {
             />
 
             {/* Mot de passe oublié */}
-            <Link href="/(auth)/forgot-password" asChild>
-              <Text style={styles.forgotPassword}>
-                Mot de passe oublié ?
-              </Text>
-            </Link>
+            <Text style={styles.forgotPassword}>
+              Mot de passe oublié ?
+            </Text>
           </View>
 
           {/* Inscription */}

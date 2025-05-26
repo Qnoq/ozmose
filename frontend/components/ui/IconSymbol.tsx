@@ -14,19 +14,56 @@ type IconSymbolName = keyof typeof MAPPING;
  * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
  */
 const MAPPING = {
+  // Navigation de base
   'house.fill': 'home',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  
+  // Authentification
   'envelope': 'email',
   'lock': 'lock',
   'person': 'person',
-  'target': 'track-changes', // ou 'my-location'
+  'eye': 'visibility',
+  'eye.slash': 'visibility-off',
+  
+  // Navigation Ozmose
+  'target': 'track-changes',
   'dice': 'casino',
   'people': 'people',
   'person.circle': 'account-circle',
-  'eye': 'visibility',
-  'eye.slash': 'visibility-off',
+  
+  // Actions et interface
+  'plus.circle': 'add-circle',
+  'plus.circle.fill': 'add-circle',
+  'list.bullet.rectangle': 'list',
+  'dice.fill': 'casino',
+  
+  // Autres icônes utiles
+  'gear': 'settings',
+  'bell': 'notifications',
+  'star': 'star',
+  'star.fill': 'star',
+  'heart': 'favorite-border',
+  'heart.fill': 'favorite',
+  'share': 'share',
+  'camera': 'camera-alt',
+  'photo': 'photo',
+  'trash': 'delete',
+  'pencil': 'edit',
+  'checkmark': 'check',
+  'xmark': 'close',
+  'info.circle': 'info',
+  'exclamationmark.triangle': 'warning',
+  'questionmark.circle': 'help',
+  
+  // Médias
+  'play.fill': 'play-arrow',
+  'pause.fill': 'pause',
+  'stop.fill': 'stop',
+  'forward.fill': 'skip-next',
+  'backward.fill': 'skip-previous',
+  
 } as IconMapping;
 
 /**
@@ -46,5 +83,14 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  // Vérifier si l'icône existe dans le mapping
+  const iconName = MAPPING[name];
+  
+  if (!iconName) {
+    console.warn(`Icon "${name}" not found in mapping. Add it to IconSymbol.tsx`);
+    // Fallback vers une icône par défaut
+    return <MaterialIcons color={color} size={size} name="help" style={style} />;
+  }
+  
+  return <MaterialIcons color={color} size={size} name={iconName} style={style} />;
 }
