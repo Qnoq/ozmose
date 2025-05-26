@@ -23,7 +23,11 @@ export default function ProfileScreen() {
         { 
           text: 'Déconnexion', 
           style: 'destructive',
-          onPress: logout
+          onPress: async () => {
+            await logout();
+            // 🔥 RETIRER toute navigation manuelle - Elle se fait automatiquement
+            console.log('✅ Logout completed, navigation will happen automatically');
+          }
         },
       ]
     );
@@ -185,130 +189,80 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardAvoid: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
   },
-  profileHeader: {
-    flexDirection: 'row',
+  header: {
     alignItems: 'center',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 20,
+    marginBottom: 48,
+    marginTop: 32,
   },
-  avatarContainer: {
-    marginRight: 16,
+  title: {
+    fontSize: 28,
+    fontWeight: '300',
+    textAlign: 'center',
   },
-  avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FF4B8B',
-    alignItems: 'center',
+  appName: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.7,
+    marginTop: 8,
+  },
+  form: {
+    flex: 1,
     justifyContent: 'center',
   },
-  profileInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF4B8B',
-  },
-  userEmail: {
-    fontSize: 16,
-    marginTop: 4,
-    opacity: 0.7,
-  },
-  badges: {
-    flexDirection: 'row',
-    marginTop: 8,
-    gap: 8,
-  },
-  premiumBadge: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  adminBadge: {
-    backgroundColor: '#161D3F',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statsSection: {
-    padding: 20,
-    borderRadius: 16,
+  errorContainer: {
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 16,
   },
-  sectionTitle: {
-    marginBottom: 16,
-    fontWeight: '600',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statCard: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF4B8B',
-    marginTop: 8,
-  },
-  statLabel: {
-    fontSize: 12,
-    marginTop: 4,
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
     textAlign: 'center',
-    opacity: 0.8,
   },
-  bioSection: {
-    padding: 20,
-    borderRadius: 16,
+  loginButton: {
+    marginTop: 8,
     marginBottom: 16,
   },
-  bioText: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  accountSection: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 24,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  infoLabel: {
+  forgotPassword: {
+    color: '#FF4B8B',
     fontSize: 16,
     fontWeight: '500',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
   },
-  infoValue: {
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 32,
+    gap: 8,
+  },
+  footerText: {
     fontSize: 16,
   },
-  actionsSection: {
-    gap: 12,
-    paddingBottom: 32,
+  registerLink: {
+    color: '#FF4B8B',
+    fontSize: 16,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
-  actionButton: {
-    marginVertical: 0,
-  },
-  logoutButton: {
-    borderColor: '#EF4444',
-    marginTop: 8,
+  devButtons: {
+    marginTop: 24,
+    opacity: 0.7,
   },
 });

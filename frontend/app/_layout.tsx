@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, router, useSegments } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
@@ -11,29 +11,32 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const { isAuthenticated, isLoading, isInitialized } = useAuth(); // ← Ajouter isInitialized
-  const segments = useSegments();
+  const { isAuthenticated, isLoading, isInitialized } = useAuth();
   
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
+  // 🔥 NAVIGATION SIMPLIFIÉE ET DIRECTE
   useEffect(() => {
-    // Ne pas faire de navigation tant que les fonts et l'auth ne sont pas initialisés
-    if (!loaded || !isInitialized) return;
-
-    const inAuthGroup = segments[0] === '(auth)';
-
-    if (!isAuthenticated && !inAuthGroup) {
-      // Utilisateur pas connecté → rediriger vers login
-      router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      // Utilisateur connecté mais sur page d'auth → rediriger vers app
-      router.replace('/(tabs)');
+    if (!loaded || !isInitialized) {
+      console.log('⏳ Waiting for fonts or auth initialization...');
+      return;
     }
-  }, [isAuthenticated, isInitialized, loaded, segments]); // ← Dépendances mises à jour
 
-  // Afficher le loading tant que les fonts ou l'auth ne sont pas prêts
+    console.log('🔄 Auth state changed:', { isAuthenticated, isInitialized });
+
+    // NAVIGATION DIRECTE SANS VÉRIFICATION DE SEGMENTS
+    if (isAuthenticated) {
+      console.log('✅ User authenticated -> navigate to tabs');
+      router.replace('/(tabs)');
+    } else {
+      console.log('❌ User not authenticated -> navigate to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized, loaded]);
+
+  // Écran de chargement tant que pas prêt
   if (!loaded || !isInitialized) {
     return (
       <View style={{ 

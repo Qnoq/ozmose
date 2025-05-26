@@ -2,21 +2,19 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router'; // ❌ RETIRER router
 import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
-  // ✅ IMPORTANT: Tous les hooks doivent être appelés en premier, inconditionnellement
   const { login, isLoading, error, clearError } = useAuth();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -52,8 +50,8 @@ export default function LoginScreen() {
     try {
       clearError();
       await login(formData);
-      // Navigation sera gérée automatiquement par le système d'auth
-      router.replace('/(tabs)');
+      // 🔥 RETIRER router.replace() - La navigation se fait automatiquement
+      console.log('✅ Login completed, navigation will happen automatically');
     } catch (error: any) {
       Alert.alert('Erreur de connexion', error.message);
     }
@@ -61,7 +59,6 @@ export default function LoginScreen() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Effacer l'erreur du champ si elle existe
     if (formErrors[field]) {
       setFormErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -76,7 +73,6 @@ export default function LoginScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled">
           
-          {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: textColor }]}>
               Bienvenue sur
@@ -89,7 +85,6 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          {/* Formulaire */}
           <View style={styles.form}>
             <Input
               label="Email"
@@ -133,13 +128,11 @@ export default function LoginScreen() {
               style={styles.loginButton}
             />
 
-            {/* Mot de passe oublié */}
             <Text style={styles.forgotPassword}>
               Mot de passe oublié ?
             </Text>
           </View>
 
-          {/* Inscription */}
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: textColor }]}>
               Pas encore de compte ?
@@ -151,7 +144,6 @@ export default function LoginScreen() {
             </Link>
           </View>
 
-          {/* Version de développement */}
           {__DEV__ && (
             <View style={styles.devButtons}>
               <Button
@@ -173,85 +165,3 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-    marginTop: 32,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '300',
-    textAlign: 'center',
-  },
-  appName: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.7,
-    marginTop: 8,
-  },
-  form: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  errorContainer: {
-    backgroundColor: '#FEE2E2',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  loginButton: {
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  forgotPassword: {
-    color: '#FF4B8B',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 32,
-    gap: 8,
-  },
-  footerText: {
-    fontSize: 16,
-  },
-  registerLink: {
-    color: '#FF4B8B',
-    fontSize: 16,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-  },
-  devButtons: {
-    marginTop: 24,
-    opacity: 0.7,
-  },
-});
