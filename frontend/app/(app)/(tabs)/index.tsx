@@ -6,17 +6,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext'; // 🔥 CHANGEMENT D'IMPORT
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function HomeScreen() {
-  const { user, logout, isPremium } = useAuth();
+  const { user, logout } = useAuth(); // 🔥 SIMPLIFICATION
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const cardColor = useThemeColor({ light: '#F8F9FA', dark: '#1F2937' }, 'background');
 
+  // 🔥 CALCUL LOCAL DES PROPRIÉTÉS
+  const isPremium = user?.is_premium || false;
+
+  // 🔥 DÉCONNEXION SIMPLIFIÉE SANS REDIRECTION
   const handleLogout = async () => {
-    await logout();
+    try {
+      await logout();
+      // Pas de redirection manuelle ! 
+      // Le RootNavigator détecte automatiquement que user = null et affiche AuthNavigator
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const quickActions = [
