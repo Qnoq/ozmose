@@ -1,3 +1,4 @@
+// services/auth.service.ts - VERSION CORRIGÉE
 import { apiService } from './api';
 import { storageService } from './storage.service';
 
@@ -112,31 +113,31 @@ class AuthService {
     }
   }
 
-  // Vérifier si l'utilisateur est connecté (VERSION OPTIMISÉE)
+  // 🔥 MÉTHODE CORRIGÉE - Vérifier si l'utilisateur est connecté
   public async isAuthenticated(): Promise<boolean> {
     try {
       const token = await storageService.getToken();
       if (!token) {
+        console.log('❌ No token found');
         return false;
       }
       
-      // ✨ OPTIMISATION : Si on a un token ET des données utilisateur en cache,
-      // on considère l'utilisateur comme authentifié sans appeler l'API
-      const cachedUser = await storageService.getUserData();
-      if (cachedUser) {
-        return true;
-      }
+      console.log('🔍 Token found, verifying with API...');
       
-      // Si pas de cache utilisateur, vérifier avec l'API
+      // 🔥 TOUJOURS VÉRIFIER AVEC L'API AU DÉMARRAGE
+      // Pas d'optimisation hasardeuse avec le cache
       try {
         await this.getCurrentUser();
+        console.log('✅ Token valid, user authenticated');
         return true;
       } catch (error) {
+        console.log('❌ Token invalid, clearing storage');
         // Token invalide, nettoyer le stockage
         await storageService.clearAll();
         return false;
       }
     } catch (error) {
+      console.log('❌ Auth check failed, clearing storage');
       // En cas d'erreur, considérer comme non authentifié
       await storageService.clearAll();
       return false;

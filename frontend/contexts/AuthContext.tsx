@@ -25,7 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔄 Checking auth state...');
       
-      const isAuth = await authService.isAuthenticated();
+        const isAuth = await authService.isAuthenticated();
+        console.log('API says authenticated:', isAuth);
       
       if (isAuth) {
         const currentUser = await authService.getCurrentUser();
