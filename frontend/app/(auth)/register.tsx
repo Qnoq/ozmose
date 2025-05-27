@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -72,8 +72,11 @@ export default function RegisterScreen() {
     try {
       clearError();
       await register(formData);
-      // ✅ SUPPRIMER CETTE LIGNE : router.replace('/(app)/(tabs)');
-      // La redirection se fera automatiquement
+      
+      // 🔥 REDIRECTION EXPLICITE APRÈS INSCRIPTION
+      console.log('✅ Registration successful, redirecting...');
+      router.replace('/(app)/(tabs)');
+      
     } catch (error: any) {
       Alert.alert('Erreur d\'inscription', error.message);
     }

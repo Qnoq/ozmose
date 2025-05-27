@@ -1,30 +1,40 @@
+// app/(auth)/login.tsx
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Link } from 'expo-router';
-import React, { useState } from 'react';
+import { Link, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet, // ← AJOUTER CETTE IMPORT
+  StyleSheet,
   Text,
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login, isLoading, error, clearError, isAuthenticated, isInitialized } = useAuth();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
+  const router = useRouter();
   
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // 🔥 REDIRECTION AUTOMATIQUE SI DÉJÀ CONNECTÉ
+  useEffect(() => {
+    if (isInitialized && isAuthenticated) {
+      console.log('✅ Already authenticated, redirecting to app');
+      router.replace('/(app)/(tabs)');
+    }
+  }, [isAuthenticated, isInitialized]);
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -50,10 +60,15 @@ export default function LoginScreen() {
   
     try {
       clearError();
+      console.log('🔄 Attempting login...');
+      
       await login(formData);
-      // ✅ SUPPRIMER CETTE LIGNE : router.replace('/(tabs)');
-      // La redirection se fera automatiquement via les layouts
+      
+      console.log('✅ Login successful, redirecting...');
+      // La redirection se fera automatiquement via useEffect
+      
     } catch (error: any) {
+      console.error('❌ Login failed:', error.message);
       Alert.alert('Erreur de connexion', error.message);
     }
   };
@@ -64,6 +79,11 @@ export default function LoginScreen() {
       setFormErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
+
+  // Ne pas afficher l'écran si déjà connecté
+  if (isInitialized && isAuthenticated) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -167,7 +187,6 @@ export default function LoginScreen() {
   );
 }
 
-// 🔥 AJOUTER CES STYLES À LA FIN DU FICHIER login.tsx :
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -1,3 +1,4 @@
+// app/(app)/(tabs)/profile.tsx
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,12 +8,14 @@ import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const { user, logout, isPremium, isAdmin } = useAuth();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const cardColor = useThemeColor({ light: '#F8F9FA', dark: '#1F2937' }, 'background');
+  const router = useRouter();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -24,9 +27,21 @@ export default function ProfileScreen() {
           text: 'Déconnexion', 
           style: 'destructive',
           onPress: async () => {
-            await logout();
-            // ✅ PAS de redirection manuelle ici non plus
-            // La redirection se fera automatiquement vers (auth)
+            try {
+              console.log('🔄 Starting logout process...');
+              await logout();
+              console.log('✅ Logout successful, redirecting to login...');
+              
+              // 🔥 REDIRECTION EXPLICITE APRÈS DÉCONNEXION
+              router.replace('/(auth)/login');
+              
+            } catch (error: any) {
+              console.error('❌ Logout error:', error);
+              Alert.alert('Erreur', 'Erreur lors de la déconnexion');
+              
+              // Forcer la redirection même en cas d'erreur
+              router.replace('/(auth)/login');
+            }
           }
         },
       ]
@@ -189,80 +204,124 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  keyboardAvoid: {
-    flex: 1,
-  },
   scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  header: {
+  profileHeader: {
+    flexDirection: 'row',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  avatarContainer: {
+    marginRight: 16,
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FF4B8B',
     alignItems: 'center',
-    marginBottom: 48,
-    marginTop: 32,
+    justifyContent: 'center',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '300',
-    textAlign: 'center',
-  },
-  appName: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.7,
-    marginTop: 8,
-  },
-  form: {
+  profileInfo: {
     flex: 1,
     justifyContent: 'center',
   },
-  errorContainer: {
-    backgroundColor: '#FEE2E2',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+  userName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  loginButton: {
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  forgotPassword: {
-    color: '#FF4B8B',
+  userEmail: {
     fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-    textDecorationLine: 'underline',
+    opacity: 0.7,
+    marginBottom: 8,
   },
-  footer: {
+  badges: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 32,
     gap: 8,
   },
-  footerText: {
-    fontSize: 16,
+  premiumBadge: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  registerLink: {
-    color: '#FF4B8B',
-    fontSize: 16,
+  adminBadge: {
+    backgroundColor: '#FF4B8B',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeText: {
+    color: '#161D3F',
+    fontSize: 12,
     fontWeight: '600',
-    textDecorationLine: 'underline',
   },
-  devButtons: {
-    marginTop: 24,
+  statsSection: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    marginBottom: 16,
+    fontWeight: '600',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statCard: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FF4B8B',
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 14,
+    marginTop: 4,
     opacity: 0.7,
+  },
+  bioSection: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  bioText: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  accountSection: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  infoLabel: {
+    fontSize: 16,
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  actionsSection: {
+    gap: 12,
+  },
+  actionButton: {
+    marginBottom: 4,
+  },
+  logoutButton: {
+    borderColor: '#EF4444',
+    marginTop: 8,
   },
 });
