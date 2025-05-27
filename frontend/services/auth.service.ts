@@ -112,7 +112,7 @@ class AuthService {
     }
   }
 
-  // Vérifier si l'utilisateur est connecté
+  // Vérifier si l'utilisateur est connecté (VERSION OPTIMISÉE)
   public async isAuthenticated(): Promise<boolean> {
     try {
       const token = await storageService.getToken();
@@ -120,7 +120,14 @@ class AuthService {
         return false;
       }
       
-      // Toujours vérifier avec l'API pour s'assurer que le token est valide
+      // ✨ OPTIMISATION : Si on a un token ET des données utilisateur en cache,
+      // on considère l'utilisateur comme authentifié sans appeler l'API
+      const cachedUser = await storageService.getUserData();
+      if (cachedUser) {
+        return true;
+      }
+      
+      // Si pas de cache utilisateur, vérifier avec l'API
       try {
         await this.getCurrentUser();
         return true;

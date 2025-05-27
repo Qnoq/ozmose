@@ -1,4 +1,4 @@
-// app/(app)/(tabs)/profile.tsx
+// app/(app)/(tabs)/profile.tsx - VERSION SIMPLIFIÉE
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,16 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
-  const { user, logout, isPremium, isAdmin } = useAuth();
+  const { user, logout } = useAuth(); // 🔥 SIMPLE : juste récupérer user et logout
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const cardColor = useThemeColor({ light: '#F8F9FA', dark: '#1F2937' }, 'background');
-  const router = useRouter();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -28,19 +26,12 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('🔄 Starting logout process...');
               await logout();
-              console.log('✅ Logout successful, redirecting to login...');
-              
-              // 🔥 REDIRECTION EXPLICITE APRÈS DÉCONNEXION
-              router.replace('/(auth)/login');
+              // 🔥 PAS DE REDIRECTION ! 
+              // Le contexte change `user` → RootNavigator affiche AuthNavigator automatiquement
               
             } catch (error: any) {
-              console.error('❌ Logout error:', error);
               Alert.alert('Erreur', 'Erreur lors de la déconnexion');
-              
-              // Forcer la redirection même en cas d'erreur
-              router.replace('/(auth)/login');
             }
           }
         },
@@ -51,8 +42,11 @@ export default function ProfileScreen() {
   const profileStats = [
     { label: 'Défis créés', value: user?.created_challenges_count || 0, icon: 'plus.circle' },
     { label: 'Participations', value: user?.participations_count || 0, icon: 'target' },
-    { label: 'Amis', value: 0, icon: 'people' }, // À implémenter
+    { label: 'Amis', value: 0, icon: 'people' },
   ];
+
+  const isPremium = user?.is_premium || false;
+  const isAdmin = user?.is_admin || false;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -61,13 +55,9 @@ export default function ProfileScreen() {
         {/* Header Profil */}
         <View style={[styles.profileHeader, { backgroundColor: cardColor }]}>
           <View style={styles.avatarContainer}>
-            {user?.avatar ? (
-              <Text>Avatar à implémenter</Text>
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <IconSymbol name="person" size={48} color="#FFFFFF" />
-              </View>
-            )}
+            <View style={styles.avatarPlaceholder}>
+              <IconSymbol name="person" size={48} color="#FFFFFF" />
+            </View>
           </View>
           
           <View style={styles.profileInfo}>
@@ -115,18 +105,6 @@ export default function ProfileScreen() {
             ))}
           </View>
         </View>
-
-        {/* Bio */}
-        {user?.bio && (
-          <View style={[styles.bioSection, { backgroundColor: cardColor }]}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              À propos
-            </ThemedText>
-            <ThemedText style={[styles.bioText, { color: textColor }]}>
-              {user.bio}
-            </ThemedText>
-          </View>
-        )}
 
         {/* Informations du compte */}
         <View style={[styles.accountSection, { backgroundColor: cardColor }]}>
@@ -286,15 +264,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
     opacity: 0.7,
-  },
-  bioSection: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 24,
-  },
-  bioText: {
-    fontSize: 16,
-    lineHeight: 24,
   },
   accountSection: {
     padding: 20,

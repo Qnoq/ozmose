@@ -1,10 +1,10 @@
-// app/(auth)/login.tsx
+// app/(auth)/login.tsx - VERSION SIMPLIFIÉE
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Link, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { Link } from 'expo-router';
+import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -17,24 +17,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
-  const { login, isLoading, error, clearError, isAuthenticated, isInitialized } = useAuth();
+  const { login } = useAuth(); // 🔥 SIMPLE : juste récupérer la fonction login
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
-  const router = useRouter();
   
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  // 🔥 REDIRECTION AUTOMATIQUE SI DÉJÀ CONNECTÉ
-  useEffect(() => {
-    if (isInitialized && isAuthenticated) {
-      console.log('✅ Already authenticated, redirecting to app');
-      router.replace('/(app)/(tabs)');
-    }
-  }, [isAuthenticated, isInitialized]);
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -59,17 +51,16 @@ export default function LoginScreen() {
     if (!validateForm()) return;
   
     try {
-      clearError();
-      console.log('🔄 Attempting login...');
+      setIsLoading(true);
       
       await login(formData);
-      
-      console.log('✅ Login successful, redirecting...');
-      // La redirection se fera automatiquement via useEffect
+      // 🔥 PAS DE REDIRECTION ! 
+      // Le contexte change `user` → RootNavigator affiche AppNavigator automatiquement
       
     } catch (error: any) {
-      console.error('❌ Login failed:', error.message);
       Alert.alert('Erreur de connexion', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,11 +70,6 @@ export default function LoginScreen() {
       setFormErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
-
-  // Ne pas afficher l'écran si déjà connecté
-  if (isInitialized && isAuthenticated) {
-    return null;
-  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -132,12 +118,6 @@ export default function LoginScreen() {
               leftIcon="lock"
               required
             />
-
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
 
             <Button
               title="Se connecter"
@@ -224,17 +204,6 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
     justifyContent: 'center',
-  },
-  errorContainer: {
-    backgroundColor: '#FEE2E2',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    textAlign: 'center',
   },
   loginButton: {
     marginTop: 8,
