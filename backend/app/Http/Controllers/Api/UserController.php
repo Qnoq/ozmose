@@ -20,7 +20,7 @@ class UserController extends Controller
     public function show(Request $request)
     {
         $user = $request->user()->load(['createdChallenges', 'participatingChallenges', 'friendsOfMine', 'friendOf']);
-                
+        info($user);
         return new UserResource($user);
     }
     

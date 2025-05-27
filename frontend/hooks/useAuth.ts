@@ -7,6 +7,7 @@ interface AuthState {
   isAuthenticated: boolean;
   error: string | null;
   isInitialized: boolean;
+  isTransitioning: boolean; // ← Nouveau
 }
 
 export function useAuth() {
@@ -16,6 +17,7 @@ export function useAuth() {
     isAuthenticated: false,
     error: null,
     isInitialized: false,
+    isTransitioning: false, // ← Ajouté
   });
 
   // 🔥 SIMPLIFIER L'INITIALISATION
@@ -33,6 +35,8 @@ export function useAuth() {
       if (isAuth) {
         try {
           const currentUser = await authService.getCurrentUser();
+          console.log(currentUser);
+          
           console.log('✅ User loaded:', currentUser.name);
           
           setState({
@@ -44,7 +48,6 @@ export function useAuth() {
           });
         } catch (error) {
           console.log('❌ Failed to get user, logout');
-          // Si on ne peut pas récupérer l'utilisateur, déconnecter
           await authService.logout();
           setState({
             user: null,
@@ -79,11 +82,9 @@ export function useAuth() {
   // 🔥 SIMPLIFIER LA CONNEXION
   const login = async (credentials: LoginCredentials) => {
     try {
-      console.log('🔄 Logging in...');
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      setState(prev => ({ ...prev, isLoading: true, isTransitioning: true, error: null }));
       
       const response = await authService.login(credentials);
-      console.log('✅ Login successful:', response.user.name);
       
       setState({
         user: response.user,
@@ -91,14 +92,15 @@ export function useAuth() {
         isAuthenticated: true,
         error: null,
         isInitialized: true,
+        isTransitioning: false,
       });
       
       return response;
     } catch (error: any) {
-      console.error('❌ Login error:', error);
       setState(prev => ({
         ...prev,
         isLoading: false,
+        isTransitioning: false,
         error: error.message || 'Erreur de connexion',
       }));
       throw error;

@@ -2,16 +2,16 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -68,12 +68,12 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!validateForm()) return;
-
+  
     try {
       clearError();
       await register(formData);
-      // Navigation sera gérée automatiquement par le système d'auth
-      router.replace('/(app)/(tabs)');
+      // ✅ SUPPRIMER CETTE LIGNE : router.replace('/(app)/(tabs)');
+      // La redirection se fera automatiquement
     } catch (error: any) {
       Alert.alert('Erreur d\'inscription', error.message);
     }

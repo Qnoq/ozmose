@@ -2,13 +2,14 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Link } from 'expo-router'; // ❌ RETIRER router
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet, // ← AJOUTER CETTE IMPORT
   Text,
   View
 } from 'react-native';
@@ -46,12 +47,12 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!validateForm()) return;
-
+  
     try {
       clearError();
       await login(formData);
-      // 🔥 RETIRER router.replace() - La navigation se fait automatiquement
-      console.log('✅ Login completed, navigation will happen automatically');
+      // ✅ SUPPRIMER CETTE LIGNE : router.replace('/(tabs)');
+      // La redirection se fera automatiquement via les layouts
     } catch (error: any) {
       Alert.alert('Erreur de connexion', error.message);
     }
@@ -165,3 +166,86 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
+
+// 🔥 AJOUTER CES STYLES À LA FIN DU FICHIER login.tsx :
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 48,
+    marginTop: 32,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '300',
+    textAlign: 'center',
+  },
+  appName: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.7,
+    marginTop: 8,
+  },
+  form: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  errorContainer: {
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  loginButton: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  forgotPassword: {
+    color: '#FF4B8B',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 32,
+    gap: 8,
+  },
+  footerText: {
+    fontSize: 16,
+  },
+  registerLink: {
+    color: '#FF4B8B',
+    fontSize: 16,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  devButtons: {
+    marginTop: 24,
+    opacity: 0.7,
+  },
+});

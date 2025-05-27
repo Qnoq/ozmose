@@ -20,14 +20,16 @@ export interface User {
   email: string;
   avatar?: string;
   bio?: string;
-  is_premium: boolean;
+  is_premium?: boolean;
   premium_until?: string;
   subscription_plan?: string;
   subscription_status?: string;
-  is_admin: boolean;
-  created_challenges_count: number;
-  participations_count: number;
-  created_at: string;
+  is_admin?: boolean;
+  created_challenges_count?: number;
+  participations_count?: number;
+  created_challenges?: any[];
+  participating_challenges?: any[];
+  created_at: string | null;
   updated_at: string;
 }
 
@@ -85,7 +87,12 @@ class AuthService {
   // Récupérer le profil utilisateur actuel
   public async getCurrentUser(): Promise<User> {
     try {
-      const user = await apiService.get<User>('/user');
+      const response = await apiService.get<{ data: User }>('/user');
+      console.log("user response", response);
+      
+      const user = response.data;
+      console.log("user data", user);
+      
       // Mettre à jour les données stockées localement
       await storageService.setUserData(user);
       return user;
@@ -105,7 +112,7 @@ class AuthService {
     }
   }
 
-  // Vérifier si l'utilisateur est connecté (VERSION OPTIMISÉE)
+  // Vérifier si l'utilisateur est connecté
   public async isAuthenticated(): Promise<boolean> {
     try {
       const token = await storageService.getToken();
@@ -113,14 +120,7 @@ class AuthService {
         return false;
       }
       
-      // ✨ OPTIMISATION : Si on a un token ET des données utilisateur en cache,
-      // on considère l'utilisateur comme authentifié sans appeler l'API
-      const cachedUser = await storageService.getUserData();
-      if (cachedUser) {
-        return true;
-      }
-      
-      // Si pas de cache utilisateur, vérifier avec l'API
+      // Toujours vérifier avec l'API pour s'assurer que le token est valide
       try {
         await this.getCurrentUser();
         return true;

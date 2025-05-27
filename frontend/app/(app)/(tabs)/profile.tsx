@@ -25,8 +25,8 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             await logout();
-            // 🔥 RETIRER toute navigation manuelle - Elle se fait automatiquement
-            console.log('✅ Logout completed, navigation will happen automatically');
+            // ✅ PAS de redirection manuelle ici non plus
+            // La redirection se fera automatiquement vers (auth)
           }
         },
       ]
