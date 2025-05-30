@@ -1,12 +1,51 @@
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolViewProps, SymbolWeight } from 'expo-symbols';
+import { SymbolWeight } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
-type IconSymbolName = keyof typeof MAPPING;
+type IconSymbolName = 
+  | 'house.fill'
+  | 'paperplane.fill'
+  | 'chevron.left.forwardslash.chevron.right'
+  | 'chevron.right'
+  | 'envelope'
+  | 'lock'
+  | 'person'
+  | 'eye'
+  | 'eye.slash'
+  | 'target'
+  | 'dice'
+  | 'people'
+  | 'person.circle'
+  | 'plus.circle'
+  | 'plus.circle.fill'
+  | 'list.bullet.rectangle'
+  | 'dice.fill'
+  | 'gear'
+  | 'bell'
+  | 'star'
+  | 'star.fill'
+  | 'heart'
+  | 'heart.fill'
+  | 'share'
+  | 'camera'
+  | 'photo'
+  | 'trash'
+  | 'pencil'
+  | 'checkmark'
+  | 'xmark'
+  | 'info.circle'
+  | 'exclamationmark.triangle'
+  | 'questionmark.circle'
+  | 'play.fill'
+  | 'pause.fill'
+  | 'stop.fill'
+  | 'forward.fill'
+  | 'backward.fill';
+
+type IconMapping = Record<IconSymbolName, ComponentProps<typeof MaterialIcons>['name']>;
 
 /**
  * Add your SF Symbols to Material Icons mappings here.
@@ -23,14 +62,14 @@ const MAPPING = {
   // Authentification
   'envelope': 'email',
   'lock': 'lock',
-  'person': 'person',
+  'person': 'person-outline',
   'eye': 'visibility',
   'eye.slash': 'visibility-off',
   
   // Navigation Ozmose
   'target': 'track-changes',
   'dice': 'casino',
-  'people': 'people',
+  'people': 'people-outline',
   'person.circle': 'account-circle',
   
   // Actions et interface

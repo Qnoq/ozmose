@@ -1,4 +1,4 @@
-// contexts/AuthContext.tsx - VERSION SIMPLIFIÉE
+// contexts/AuthContext.tsx - VERSION SIMPLE SANS CHICHIS
 import { authService, LoginCredentials, RegisterCredentials, User } from '@/services/auth.service';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🔥 VÉRIFICATION AUTH AU DÉMARRAGE - UNE SEULE FOIS
+  // Vérification auth au démarrage
   useEffect(() => {
     checkAuthState();
   }, []);
@@ -25,8 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔄 Checking auth state...');
       
-        const isAuth = await authService.isAuthenticated();
-        console.log('API says authenticated:', isAuth);
+      const isAuth = await authService.isAuthenticated();
       
       if (isAuth) {
         const currentUser = await authService.getCurrentUser();
@@ -40,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('❌ Auth check failed:', error);
       setUser(null);
     } finally {
+      console.log('✅ Auth check completed');
       setIsLoading(false);
     }
   };
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authService.login(credentials);
       
       console.log('✅ Login successful:', response.user.name);
-      setUser(response.user); // 🔥 SIMPLE : Juste changer l'état
+      setUser(response.user);
       
     } catch (error: any) {
       console.error('❌ Login failed:', error);
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authService.register(credentials);
       
       console.log('✅ Registration successful:', response.user.name);
-      setUser(response.user); // 🔥 SIMPLE : Juste changer l'état
+      setUser(response.user);
       
     } catch (error: any) {
       console.error('❌ Registration failed:', error);
@@ -78,11 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authService.logout();
       
       console.log('✅ Logout successful');
-      setUser(null); // 🔥 SIMPLE : Juste changer l'état
+      setUser(null);
       
     } catch (error) {
       console.error('❌ Logout error:', error);
-      // Force logout même si erreur
       setUser(null);
     }
   };

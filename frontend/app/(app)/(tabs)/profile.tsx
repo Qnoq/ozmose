@@ -49,6 +49,7 @@ export default function ProfileScreen() {
   const isAdmin = user?.is_admin || false;
 
   return (
+    
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         

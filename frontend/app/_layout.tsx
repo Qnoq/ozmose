@@ -1,7 +1,9 @@
+// app/_layout.tsx - VERSION BRUTALE QUI MARCHE
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import 'react-native-reanimated';
 
@@ -31,38 +33,50 @@ function LoadingScreen() {
   );
 }
 
-// Navigation de l'app (utilisateur connecté)
-function AppNavigator() {
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(app)/(tabs)" />
-    </Stack>
-  );
-}
-
-// Navigation d'authentification (utilisateur non connecté)
-function AuthNavigator() {
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)/login" />
-      <Stack.Screen name="(auth)/register" />
-    </Stack>
-  );
-}
-
-// Navigateur principal avec logique d'authentification
-function RootNavigator() {
+// 🔥 COMPOSANT QUI GÈRE LES REDIRECTIONS BRUTALEMENT
+function AuthRedirectHandler({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
 
-  console.log('🔄 RootNavigator - User:', user?.name || 'null', 'Loading:', isLoading);
+  useEffect(() => {
+    if (isLoading) return; // Attendre la fin du loading
+
+    const inAuthGroup = segments[0] === '(auth)';
+    const inAppGroup = segments[0] === '(app)';
+
+    console.log('🔍 Redirect check:', {
+      user: user?.name || 'null',
+      inAuthGroup,
+      inAppGroup,
+      segments
+    });
+
+    // 🔥 REDIRECTIONS BRUTALES
+    if (!user && inAppGroup) {
+      console.log('❌ Not authenticated, redirecting to login');
+      router.replace('/(auth)/login');
+    } else if (user && inAuthGroup) {
+      console.log('✅ Authenticated, redirecting to app');
+      router.replace('/(app)/(tabs)');
+    } else if (!inAuthGroup && !inAppGroup) {
+      // Premier chargement
+      if (user) {
+        console.log('🏠 Initial redirect to app');
+        router.replace('/(app)/(tabs)');
+      } else {
+        console.log('🏠 Initial redirect to login');
+        router.replace('/(auth)/login');
+      }
+    }
+  }, [user, isLoading, segments]);
 
   // Écran de chargement pendant la vérification
   if (isLoading) {
     return <LoadingScreen />;
   }
 
-  // 🔥 LOGIQUE SIMPLE : Connecté ou pas connecté
-  return user ? <AppNavigator /> : <AuthNavigator />;
+  return <>{children}</>;
 }
 
 // Layout principal
@@ -81,7 +95,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <RootNavigator />
+        <AuthRedirectHandler>
+          <Slot />
+        </AuthRedirectHandler>
         <StatusBar style="auto" />
       </AuthProvider>
     </ThemeProvider>
