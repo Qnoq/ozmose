@@ -1,7 +1,12 @@
+{
+    frankenphp
+}
+
 srv829722.hstgr.cloud:443 {
     tls /etc/letsencrypt/live/srv829722.hstgr.cloud/fullchain.pem /etc/letsencrypt/live/srv829722.hstgr.cloud/privkey.pem
     root * /home/user/htdocs/ozmose/backend/public
-    encode gzip
-    php_fastcgi unix//run/php/php-fpm.sock
-    file_server
+    encode zstd br gzip
+    php_server {
+        try_files {path} index.php
+    }
 }
